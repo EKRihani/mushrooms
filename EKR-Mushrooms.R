@@ -5,14 +5,6 @@
 # Check and install required libraries
 if(!require(tidyverse)) install.packages("tidyverse", repos = "http://cran.us.r-project.org")
 if(!require(caret)) install.packages("caret", repos = "http://cran.us.r-project.org")
-#if(!require(data.table)) install.packages("data.table", repos = "http://cran.us.r-project.org")
-#if(!require(mice)) install.packages("mice", repos = "http://cran.us.r-project.org")
-#if(!require(lattice)) install.packages("lattice", repos = "http://cran.us.r-project.org")
-#if(!require(ranger)) install.packages("ranger", repos = "http://cran.us.r-project.org")
-#if(!require(evtree)) install.packages("evtree", repos = "http://cran.us.r-project.org")
-#if(!require(fastAdaboost)) install.packages("fastAdaboost", repos = "http://cran.us.r-project.org")
-#if(!require(randomForest)) install.packages("randomForest", repos = "http://cran.us.r-project.org")
-if(!require(ranger)) install.packages("ranger", repos = "http://cran.us.r-project.org")
 
 # Load required libraries
 library(tidyverse)      # Set of packages used in everyday data analyses
@@ -24,15 +16,15 @@ library(caret)      # Set of packages for machine learning
 #library(evtree)   # for evtree
 #library(fastAdaboost)   # for adaboost
 #library(randomForest)   # for rf
-library(ranger)   # for ranger
+#library(ranger)   # for ranger
+library(binda)
 
 # Get, decompress, import data file
 datafile <- tempfile()
-#download.file("https://archive.ics.uci.edu/ml/machine-learning-databases/00615/MushroomDataset.zip", datafile)
-datafile <- "~/projects/mushrooms/MushroomDataset.zip"    # Use Local File (faster)
+download.file("https://archive.ics.uci.edu/ml/machine-learning-databases/00615/MushroomDataset.zip", datafile)
+#datafile <- "~/projects/mushrooms/MushroomDataset.zip"    # Use Local File (faster)
 datafile <- unzip(datafile, "MushroomDataset/secondary_data.csv")
 dataset <- read.csv(datafile, header = TRUE, sep = ";")
-
 
 ################################
 #  DATA FORMATTING / CLEANING  #
@@ -71,7 +63,6 @@ structure_final <- sapply(X = dataset, FUN = class, simplify = TRUE) # Get all f
 structure_dataset <- data.frame(cbind(structure_initial, structure_uniques, structure_final))
 colnames(structure_dataset) <- c("Initial", "Levels", "Final")
 
-
 ##################################
 #     INTRODUCTORY ANALYSIS      #
 ##################################
@@ -93,11 +84,11 @@ for (n in 1:l){
       ylab("Frequency") +
       xlab(num_names[n]) +
       geom_histogram(fill = "gray45") +
+#      geom_density() +
       theme_bw()
    plotname <- paste0("study_distrib_", num_names[n])   # Concatenate "plot_distrib" with the column name
    assign(plotname, plot)     # Assign the plot to the plot_distrib_colname name
 }
-
 
 ############################
 #     MACHINE TRAINING     #
@@ -118,18 +109,41 @@ for (n in 1:l){
       ylab("Frequency") +
       xlab(num_names[n]) +
       geom_density(size = 1.5) +
+      scale_y_sqrt() +
       theme_bw()
    plotname <- paste0("train_distrib_", num_names[n])   # Concatenate "plot_distrib" with the column name
    assign(plotname, plot)     # Assign the plot to the plot_distrib_colname name
 }
 
-# Handle missing values
-#md.pattern(dataset, rotate.names = TRUE)
-#mice_input <- mice(trainvalid_set, method = "pmm", seed = 1)  # MICE imputation on training/validation set (random forest)
-#trainvalid_set <- complete(mice_input)  # Fill the missing values on training/validation set
-#mice_input <- mice(evaluation_set, method = "pmm", seed = 1)  # MICE imputation on evaluation set (random forest)
-#evaluation_set <- complete(mice_input)  # Fill the missing values on evaluation set
+plot_stemHW <- trainvalid_set %>%
+   ggplot(aes(x = stem.height, y = stem.width, color = class)) +
+   #   scale_x_sqrt() + scale_y_sqrt() +
+   geom_point(alpha = .3) +
+   theme_bw()
 
+plot_cap_stemW <- trainvalid_set %>%
+   ggplot(aes(x = cap.diameter, y = stem.width, color = class)) +
+#   scale_x_sqrt() + scale_y_sqrt() +
+   geom_point(alpha = .3) +
+   theme_bw()
+
+plot_cap_stemH <- trainvalid_set %>%
+   ggplot(aes(x = cap.diameter, y = stem.height, color = class)) +
+#   scale_x_sqrt() + scale_y_sqrt() +
+   geom_point(alpha = .3) +
+   theme_bw()
+
+plot_capSS <- trainvalid_set %>%
+   ggplot(aes(x = cap.shape, y = cap.surface, color = class)) +
+   #   scale_x_sqrt() + scale_y_sqrt() +
+   geom_jitter(alpha = .3) +
+   theme_bw()
+
+trainvalid_set %>%
+   ggplot(aes(x = stem.root, y = stem.color, color = class)) +
+   #   scale_x_sqrt() + scale_y_sqrt() +
+   geom_jitter(alpha = .3) +
+   theme_bw()
 
 # Create training and validation sets
 set.seed(1, sample.kind="Rounding")
@@ -152,14 +166,9 @@ confusionMatrix(glm_prediction, validation_set$class)$overall[["Accuracy"]]
 
 #fitting <- train(class ~ ., method = "rpart", tuneGrid  = data.frame(cp = seq(0.005, 0.015, len = 20)), data = training_set)
 fitting <- train(class ~ ., method = "rpart", data = training_set, tuneGrid =data.frame(cp =.012))
-prediction <- predict(fitting, validation_set, type = "raw")
-confusionMatrix(prediction, validation_set$class)$overall[["Accuracy"]]
-plot(fitting$finalModel, margin = .1)
-text(fitting$finalModel, cex = 0.7)
-plot(fitting)
-
-
+fitting <- train(class ~ ., method = "binda", data = training_set)
 fitting <- train(class ~ ., method = "ranger", data = training_set, num.trees = 5)
+
 prediction <- predict(fitting, validation_set, type = "raw")
 confusionMatrix(prediction, validation_set$class)$overall[["Accuracy"]]
 plot(fitting)
@@ -171,13 +180,10 @@ model_list <- names(getModelInfo())
 
 # http://topepo.github.io/caret/available-models.html
 
-
 save.image(file = "EKR-heartfailure.RData")
 
-
-##############
+############
 trainvalid_set %>%
    ggplot(aes(y = MaxHR, x = Age, color = class)) +
    geom_point(alpha = .7) +
    stat_ellipse(type="norm",  lwd  =  1.5)
-
