@@ -108,7 +108,7 @@ for (n in 2:l){    # Column 1 (class) isn't plotted since it's the fill attribut
       ggplot(aes_string(x = dataset_names[n], fill = trainvalid_set$class)) + #aes_string allows use of string instead of variable name
       ggtitle(plot_title) +
       ylab("Frequency") +
-      xlab(num_names[n]) +
+      xlab(dataset_names[n]) +
       scale_y_log10() +
       theme_bw()
    if(structure_dataset$Final[n] %in% c("integer", "numeric"))  # Histogram for integer/numeric, Barplot for character/factors/logical
