@@ -17,7 +17,7 @@ library(caret)      # Set of packages for machine learning
 #library(fastAdaboost)   # for adaboost
 #library(randomForest)   # for rf
 #library(ranger)   # for ranger
-library(binda)
+library(binda) # for ???
 
 # Get, decompress, import data file
 datafile <- tempfile()
@@ -72,21 +72,22 @@ summary_number <- nrow(dataset)  # Mushroom count
 summary_dataset <- summary(dataset) # Basic summary of all categories
 
 # Distribution plots for numeric/integer parameters
-num_index <- which(structure_dataset$Final %in% c("integer", "numeric"))
-num_names <- row.names(structure_dataset[num_index,])
-l <- length(num_index)
+dataset_names <-row.names(structure_dataset)
+l <- nrow(structure_dataset)
 
 for (n in 1:l){
-   plot_title <- paste("Mushroom", num_names[n], "distribution")
+   plot_title <- paste("Mushroom", dataset_names[n], "distribution")
    plot <- dataset %>%
-      ggplot(aes_string(x = num_names[n])) + #aes_string allows use of string instead of variable name
+      ggplot(aes_string(x = dataset_names[n])) + #aes_string allows use of string instead of variable name
       ggtitle(plot_title) +
       ylab("Frequency") +
-      xlab(num_names[n]) +
-      geom_histogram(fill = "gray45") +
-#      geom_density() +
+      xlab(dataset_names[n]) +
       theme_bw()
-   plotname <- paste0("study_distrib_", num_names[n])   # Concatenate "plot_distrib" with the column name
+   if(structure_dataset$Final[n] %in% c("integer", "numeric")) # Histogram for integer/numeric, Barplot for character/factors/logical
+      {plot <- plot + geom_histogram(fill = "gray45")}
+   else
+      {plot <- plot + geom_bar(fill = "gray45")}
+   plotname <- paste0("study_distrib_", dataset_names[n])   # Concatenate "plot_distrib" with the column name
    assign(plotname, plot)     # Assign the plot to the plot_distrib_colname name
 }
 
@@ -101,17 +102,20 @@ trainvalid_set <- dataset[-test_index,]
 evaluation_set <- dataset[test_index,]
 #rm(dataset)
 
-for (n in 1:l){
-   plot_title <- paste("Mushroom", num_names[n], "distribution")
+for (n in 2:l){    # Column 1 (class) isn't plotted since it's the fill attribute
+   plot_title <- paste("Mushroom", dataset_names[n], "distribution")
    plot <- trainvalid_set %>%
-      ggplot(aes_string(x = num_names[n], color = trainvalid_set$class)) + #aes_string allows use of string instead of variable name
+      ggplot(aes_string(x = dataset_names[n], fill = trainvalid_set$class)) + #aes_string allows use of string instead of variable name
       ggtitle(plot_title) +
       ylab("Frequency") +
       xlab(num_names[n]) +
-      geom_density(size = 1.5) +
-      scale_y_sqrt() +
+      scale_y_log10() +
       theme_bw()
-   plotname <- paste0("train_distrib_", num_names[n])   # Concatenate "plot_distrib" with the column name
+   if(structure_dataset$Final[n] %in% c("integer", "numeric"))  # Histogram for integer/numeric, Barplot for character/factors/logical
+      {plot <- plot + geom_histogram()}
+   else
+      {plot <- plot + geom_bar()}
+   plotname <- paste0("train_distrib_",dataset_names[n])   # Concatenate "plot_distrib" with the column name
    assign(plotname, plot)     # Assign the plot to the plot_distrib_colname name
 }
 
