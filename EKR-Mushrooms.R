@@ -75,6 +75,7 @@ summary_dataset <- summary(dataset) # Basic summary of all categories
 dataset_names <-row.names(structure_dataset)
 l <- nrow(structure_dataset)
 
+# Plot all monovariate distributions of the entire dataset
 for (n in 1:l){
    plot_title <- paste("Mushroom", dataset_names[n], "distribution")
    plot <- dataset %>%
@@ -84,9 +85,9 @@ for (n in 1:l){
       xlab(dataset_names[n]) +
       theme_bw()
    if(structure_dataset$Final[n] %in% c("integer", "numeric")) # Histogram for integer/numeric, Barplot for character/factors/logical
-      {plot <- plot + geom_histogram(fill = "gray45")}
+   {plot <- plot + geom_histogram(fill = "gray45")}
    else
-      {plot <- plot + geom_bar(fill = "gray45")}
+   {plot <- plot + geom_bar(fill = "gray45")}
    plotname <- paste0("study_distrib_", dataset_names[n])   # Concatenate "plot_distrib" with the column name
    assign(plotname, plot)     # Assign the plot to the plot_distrib_colname name
 }
@@ -102,6 +103,7 @@ trainvalid_set <- dataset[-test_index,]
 evaluation_set <- dataset[test_index,]
 #rm(dataset)
 
+# Plot all monovariate distributions of the training set (poisonous vs edible)
 for (n in 2:l){    # Column 1 (class) isn't plotted since it's the fill attribute
    plot_title <- paste("Mushroom", dataset_names[n], "distribution")
    plot <- trainvalid_set %>%
@@ -112,41 +114,48 @@ for (n in 2:l){    # Column 1 (class) isn't plotted since it's the fill attribut
       scale_y_log10() +
       theme_bw()
    if(structure_dataset$Final[n] %in% c("integer", "numeric"))  # Histogram for integer/numeric, Barplot for character/factors/logical
-      {plot <- plot + geom_histogram()}
+   {plot <- plot + geom_histogram()}
    else
-      {plot <- plot + geom_bar()}
-   plotname <- paste0("train_distrib_",dataset_names[n])   # Concatenate "plot_distrib" with the column name
-   assign(plotname, plot)     # Assign the plot to the plot_distrib_colname name
+   {plot <- plot + geom_bar()}
+   plotname <- paste0("train_distrib_",dataset_names[n])   # Concatenate "train_distrib" with the column name
+   assign(plotname, plot)     # Assign the plot to the train_distrib_colname name
 }
 
-plot_stemHW <- trainvalid_set %>%
-   ggplot(aes(x = stem.height, y = stem.width, color = class)) +
-   #   scale_x_sqrt() + scale_y_sqrt() +
-   geom_point(alpha = .3) +
-   theme_bw()
+# Plot all bivariate distributions of the training set (poisonous vs edible)
+for (n in 2:l){    # Column 1 (class) isn't plotted since it's the fill attribute
+   for (m in 2:l){
+      plot <- trainvalid_set %>%
+         ggplot(aes_string(x = dataset_names[n], y = dataset_names[m], color = trainvalid_set$class)) + #aes_string allows use of string instead of variable name
+         xlab(dataset_names[n]) +
+         ylab(dataset_names[m]) +
+         theme_bw()
+      if(structure_dataset$Final[n] %in% c("integer", "numeric") & structure_dataset$Final[m] %in% c("integer", "numeric"))  # Histogram for 2x integer/numeric,
+      {plot <- plot + geom_point(alpha = .2)}
+      else
+      {plot <- plot + geom_jitter(alpha = .2)} # jitter if 1 or 2 variables are character/factors/logical
+      plotname <- paste0("train_distrib_",dataset_names[n],"_",dataset_names[m])   # Concatenate "train_distrib" with the column names
+      assign(plotname, plot)     # Assign the plot to the train_distrib_colname1_colname2 name
+   }
+}
 
-plot_cap_stemW <- trainvalid_set %>%
+trainvalid_set %>%
    ggplot(aes(x = cap.diameter, y = stem.width, color = class)) +
-#   scale_x_sqrt() + scale_y_sqrt() +
-   geom_point(alpha = .3) +
+   #   scale_x_sqrt() + scale_y_sqrt() +
+   geom_point(alpha = .2) +
    theme_bw()
 
-plot_cap_stemH <- trainvalid_set %>%
-   ggplot(aes(x = cap.diameter, y = stem.height, color = class)) +
-#   scale_x_sqrt() + scale_y_sqrt() +
-   geom_point(alpha = .3) +
-   theme_bw()
 
 plot_capSS <- trainvalid_set %>%
    ggplot(aes(x = cap.shape, y = cap.surface, color = class)) +
    #   scale_x_sqrt() + scale_y_sqrt() +
-   geom_jitter(alpha = .3) +
+   geom_jitter(alpha = .2) +
    theme_bw()
+plot_capSS
 
 trainvalid_set %>%
-   ggplot(aes(x = stem.root, y = stem.color, color = class)) +
+   ggplot(aes(x = stem.height, y = stem.color, color = class)) +
    #   scale_x_sqrt() + scale_y_sqrt() +
-   geom_jitter(alpha = .3) +
+   geom_jitter(alpha = .2) +
    theme_bw()
 
 # Create training and validation sets
@@ -184,7 +193,7 @@ model_list <- names(getModelInfo())
 
 # http://topepo.github.io/caret/available-models.html
 
-save.image(file = "EKR-heartfailure.RData")
+save.image(file = "EKR-mushrooms.RData")
 
 ############
 trainvalid_set %>%
