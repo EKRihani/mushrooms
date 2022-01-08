@@ -130,9 +130,9 @@ for (n in 2:l){    # Column 1 (class) isn't plotted since it's the fill attribut
          ylab(dataset_names[m]) +
          theme_bw()
       if(structure_dataset$Final[n] %in% c("integer", "numeric") & structure_dataset$Final[m] %in% c("integer", "numeric"))  # Histogram for 2x integer/numeric,
-      {plot <- plot + geom_point(alpha = .2)}
+      {plot <- plot + geom_point(alpha = .5, shape = 20)}
       else
-      {plot <- plot + geom_jitter(alpha = .2)} # jitter if 1 or 2 variables are character/factors/logical
+      {plot <- plot + geom_jitter(alpha = .5, shape = 20)} # jitter if 1 or 2 variables are character/factors/logical
       plotname <- paste0("train_distrib_",dataset_names[n],"_",dataset_names[m])   # Concatenate "train_distrib" with the column names
       assign(plotname, plot)     # Assign the plot to the train_distrib_colname1_colname2 name
    }
@@ -145,16 +145,13 @@ trainvalid_set %>%
    theme_bw()
 
 
-plot_capSS <- trainvalid_set %>%
-   ggplot(aes(x = cap.shape, y = cap.surface, color = class)) +
-   #   scale_x_sqrt() + scale_y_sqrt() +
-   geom_jitter(alpha = .2) +
+trainvalid_set %>%
+   ggplot(aes(x = cap.shape, y = cap.color, color = class)) +
+   geom_jitter(alpha = .5, shape = 20) +
    theme_bw()
-plot_capSS
 
 trainvalid_set %>%
    ggplot(aes(x = stem.height, y = stem.color, color = class)) +
-   #   scale_x_sqrt() + scale_y_sqrt() +
    geom_jitter(alpha = .2) +
    theme_bw()
 
