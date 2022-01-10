@@ -191,6 +191,7 @@ model_list <- names(getModelInfo())
 # http://topepo.github.io/caret/available-models.html
 
 save.image(file = "EKR-mushrooms.RData")
+load("EKR-mushrooms.RData")
 
 ############
 trainvalid_set %>%
