@@ -122,17 +122,18 @@ for (n in 2:l){    # Column 1 (class) isn't plotted since it's the fill attribut
 }
 
 # Plot all bivariate distributions of the training set (poisonous vs edible)
-for (n in 2:l){    # Column 1 (class) isn't plotted since it's the fill attribute
+for (n in 2:l){    # Column 1 (class) isn't plotted since it's the color attribute
    for (m in 2:l){
       plot <- trainvalid_set %>%
          ggplot(aes_string(x = dataset_names[n], y = dataset_names[m], color = trainvalid_set$class)) + #aes_string allows use of string instead of variable name
-         xlab(dataset_names[n]) +
-         ylab(dataset_names[m]) +
+         labs(colour = "class", x = dataset_names[n], y =dataset_names[m]) + 
          theme_bw()
       if(structure_dataset$Final[n] %in% c("integer", "numeric") & structure_dataset$Final[m] %in% c("integer", "numeric"))  # Histogram for 2x integer/numeric,
-      {plot <- plot + geom_point(alpha = .5, shape = 20)}
+         {plot <- plot + geom_point(alpha = .5, shape = 20)} # regular scatterplot if all variables are numeric/integer
       else
-      {plot <- plot + geom_jitter(alpha = .5, shape = 20)} # jitter if 1 or 2 variables are character/factors/logical
+         {plot <- plot + geom_jitter(alpha = .5, shape = 20)} # jitter if 1 or 2 variables are character/factors/logical
+      if(structure_dataset$Final[n] %in% c("factor", "logical", "character"))
+         {plot <- plot + scale_x_discrete(guide = guide_axis(angle = 90))} # rotate X axis labels if text
       plotname <- paste0("train_distrib_",dataset_names[n],"_",dataset_names[m])   # Concatenate "train_distrib" with the column names
       assign(plotname, plot)     # Assign the plot to the train_distrib_colname1_colname2 name
    }
