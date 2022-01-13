@@ -76,7 +76,7 @@ This dataset contains the data from n = `r summary_number` mushrooms (rows). Eac
 * *Gill color* : brown (n), buff (b), gray (g), green (r), pink (p), purple (u), red (e), white (w), yellow (y), blue (l), orange (o), black (k) or none (f)
 * *Stem height* : in centimeters
 * *Stem width* : in millimeters
-* *Stem root* : bulbous (b), swollen (s), club (c), cup (u), equal (e), rhizomorphs (z) or rooted (r)
+* *Stem root* : bulbous (b), swollen (s), club (c), cup (u), equal (e), rhizomorphs (z), rooted (r) (or none (f))
 * *Stem surface* : fibrous (i), grooves (g), scaly (y), smooth (s), shiny (h), leathery (l), silky (k), sticky (t), wrinkled (w), fleshy (e) or none (f)
 * *Stem color* : brown (n), buff (b), gray (g), green (r), pink (p), purple (u), red (e), white (w), yellow (y), blue (l), orange (o), black (k) or none (f)
 * *Veil type* : partial (p) or universal (u)
@@ -104,13 +104,26 @@ The code, benchmarks and report were run on the following computer configuration
 The code was also tested on a Windows 7 x64 SP1 computer with 16 GB RAM. It was not tested on any Mac OS system.
 \subsection{Data preparation and cleaning}
 \paragraph*{}
-The dataset is directly downloaded from the UCI database in zip format, unzipped and the csv file extracted using the *read.csv* function.
+The dataset is directly downloaded from the UCI database in zip format and unzipped. The archive countains four files :
+
+* *primary_data.csv* : the csv file with all data used for creating the base. One line for each of the 173 species.
+* *primary_data_meta.txt* : metadata for the primary dataset.
+* *secondary_data.csv* : the final dataset, made of all  `r summary_number` specimen.
+* *secondary_data_meta.txt* : metadata for the secondary dataset.
+
+\paragraph*{}
+The file of interest (*secondary_data.csv*) is extracted using the *read.csv* function.
 \paragraph*{}
 The initial and final structures of the dataset are as following :
 ```{r out.width = "90%", echo = FALSE}
 kable(structure_dataset, caption = "Dataset structure")
 ```
-The import automatically converted all character variables to factors. The only modification was to modify some of the 2-level factors into logical variables.
+The import automatically converted all character variables to factors. The only structural modification was to modify some of the 2-level factors into logical variables.
+\paragraph*{}
+The primary and secondary *data_meta* files include all information to translate the one-letter variable codes into comprehensible words. However, one variable code is missing : the *stem.root = f* value isn't explained. Since most *f* values for the other categorical stem variables (*stem.surface*, *stem.color*) mean the mushroom has no stem and given the fact that all stem.root = f values are always associated with *stem.surface = f*, *stem.color = f*, *stem.height = 0* and *stem.width = 0*, one can safely assume that *stem.root = f* isimply means there is no stem.
+```{r out.width = "90%", echo = FALSE}
+kable(uniques_missing_f, caption = "Unique values for stem.root = 'f'")
+```
 \paragraph*{}
 We can then get basic information about our mushroom population, such as dimensional distributions.  
 ```{r, echo = FALSE, fig.cap = "Mushroom cap diameter, stem height and stem width distribution"}
@@ -136,7 +149,7 @@ plot(ggarrange(
 )
 ```  
 \paragraph*{}
-The cap diameter distribution looks like a bell curve with a long right tail but actually is bimodal, with a main mode toward 5 cm, and a much smaller secondary mode toward 50 cm. This size can look quite surprising, but some species such as *Polyporus squamosus* (dryad's saddle) can be very large and weight up to 5 kg.
+The cap diameter distribution looks like a bell curve with a long right tail but actually is bimodal, with a main mode toward 5 cm, and a much smaller secondary mode toward 50 cm. This size can look quite surprising, but some species such as *Polyporus squamosus* (dryad's saddle) can be very large with some specimens that can weight up to 5 kg.
 \paragraph*{}
 The stem height distribution also looks like a bell curve with a long right tail, a main mode around 5 cm, and a secondary mode at 0 cm. Again, this can look surprising, but some mushrooms have no stem, which could explain this height value.
 \paragraph*{}

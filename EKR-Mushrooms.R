@@ -35,6 +35,10 @@ structure_initial <- sapply(X = dataset, FUN = class, simplify = TRUE) # Get all
 unique_length <- function (x) {length(unique(x))}  # Define function : count levels of a variable
 structure_uniques <- sapply(dataset, FUN = unique_length) # Count levels of all dataset variables
 
+# What is stem.root = f ? The metadata doesn't indicate it, let's find out...
+data_missing_f <- dataset %>% filter(stem.root == "f") %>% select(stem.root, stem.color, stem.surface, stem.width, stem.height) # select all useful (i.e. stem) properties
+uniques_missing_f <- unique(data_missing_f)
+
 # Change dataset factors into intelligible words
 dataset$class <- recode_factor(dataset$class, e = "edible", p = "poisonous")
 dataset$cap.shape <- recode_factor(dataset$cap.shape, b = "bell", c = "conical", x = "convex", f = "flat", s = "sunken", p = "spherical", o = "other")
@@ -43,7 +47,7 @@ dataset$cap.color <- recode_factor(dataset$cap.color, n = "brown", b = "buff", g
 dataset$gill.attachment <- recode_factor(dataset$gill.attachment, a = "adnate", x = "adnexed", d = "decurrent", e = "free", s = "sinuate", p = "pores", f = "none", "?" = "unknown")
 dataset$gill.spacing <- recode_factor(dataset$gill.spacing, c = "close", d = "distant", f = "none")
 dataset$gill.color <- recode_factor(dataset$gill.color, n = "brown", b = "buff", g = "gray", r = "green", p = "pink", u = "purple", e = "red", w = "white", y = "yellow", l = "blue", o = "orange", k = "black", f = "none")
-dataset$stem.root <- recode_factor(dataset$stem.root, b = "bulbous", s = "swollen", c = "club", u = "cup", e = "equal", z = "rhizomorphs", r = "rooted")
+dataset$stem.root <- recode_factor(dataset$stem.root, b = "bulbous", s = "swollen", c = "club", u = "cup", e = "equal", z = "rhizomorphs", r = "rooted", f = "none")
 dataset$stem.surface <- recode_factor(dataset$stem.surface, i = "fibrous", g = "grooves", y = "scaly", s = "smooth", h = "shiny", l = "leathery", k = "silky", t = "sticky", w = "wrinkled", e = "fleshy", f = "none")
 dataset$stem.color <- recode_factor(dataset$stem.color, n = "brown", b = "buff", g = "gray", r = "green", p = "pink", u = "purple", e = "red", w = "white", y = "yellow", l = "blue", o = "orange", k = "black", f = "none")
 dataset$veil.type <- recode_factor(dataset$veil.type, p = "partial", u = "universal")
@@ -156,6 +160,11 @@ trainvalid_set %>%
    geom_jitter(alpha = .2) +
    theme_bw()
 
+trainvalid_set %>%
+   ggplot(aes(x = stem.height, y = stem.width, color = class)) +
+   geom_point(alpha = .7) +
+   stat_ellipse(type="norm",  lwd  =  1.5)
+
 # Create training and validation sets
 set.seed(1, sample.kind="Rounding")
 test_index <- createDataPartition(y = trainvalid_set$cap.diameter, times = 1, p = 0.1, list = FALSE)
@@ -193,9 +202,3 @@ model_list <- names(getModelInfo())
 
 save.image(file = "EKR-mushrooms.RData")
 load("EKR-mushrooms.RData")
-
-############
-trainvalid_set %>%
-   ggplot(aes(y = MaxHR, x = Age, color = class)) +
-   geom_point(alpha = .7) +
-   stat_ellipse(type="norm",  lwd  =  1.5)
