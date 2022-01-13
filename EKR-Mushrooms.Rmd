@@ -136,11 +136,11 @@ plot(ggarrange(
 )
 ```  
 \paragraph*{}
-The cap diameter distribution looks like a right-skewed bell curve but actually is bimodal, with a main mode toward 5 cm, and a much smaller secondary mode toward 50 cm. This size can look quite surprising, but some species such as *Polyporus squamosus* (dryad's saddle) can be very large and weight up to 5 kg.
+The cap diameter distribution looks like a bell curve with a long right tail but actually is bimodal, with a main mode toward 5 cm, and a much smaller secondary mode toward 50 cm. This size can look quite surprising, but some species such as *Polyporus squamosus* (dryad's saddle) can be very large and weight up to 5 kg.
 \paragraph*{}
-The stem height distribution also looks like a right-skewed bell curve, with a main mode around 5 cm, and a secondary mode at 0 cm. Again, this can look surprising, but some mushrooms have no stem, which could explain this height value.
+The stem height distribution also looks like a bell curve with a long right tail, a main mode around 5 cm, and a secondary mode at 0 cm. Again, this can look surprising, but some mushrooms have no stem, which could explain this height value.
 \paragraph*{}
-The stem width distribution looks like a right-skewed bell curve, with a peak around 12 mm. In all three distributions, the tail could probably be explained by the impossibility to have negative dimensional values.
+The stem width distribution looks like a bell curve with a long right tail, and a peak around 12 mm. In all three distributions, the right tail can probably be explained by the impossibility to have negative dimensional values.
 
 \paragraph*{}
 *Section that explains the process and techniques used, including data cleaning, data exploration and visualization, insights gained, and your modeling approach*
