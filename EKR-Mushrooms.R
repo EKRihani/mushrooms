@@ -81,7 +81,7 @@ for (n in 1:l){
    plot <- dataset %>%
       ggplot(aes_string(x = dataset_names[n])) + #aes_string allows use of string instead of variable name
       ggtitle(plot_title) +
-      ylab("Frequency") +
+      ylab("") +
       xlab(dataset_names[n]) +
       theme_bw()
    if(structure_dataset$Final[n] %in% c("integer", "numeric")) # Histogram for integer/numeric, Barplot for character/factors/logical

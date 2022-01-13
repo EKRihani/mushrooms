@@ -75,7 +75,7 @@ This dataset contains the data from n = `r summary_number` mushrooms (rows). Eac
 * *Gill spacing* : close (c), distant (d), none (f)
 * *Gill color* : brown (n), buff (b), gray (g), green (r), pink (p), purple (u), red (e), white (w), yellow (y), blue (l), orange (o), black (k) or none (f)
 * *Stem height* : in centimeters
-* *Stem width* : in centimeters
+* *Stem width* : in millimeters
 * *Stem root* : bulbous (b), swollen (s), club (c), cup (u), equal (e), rhizomorphs (z) or rooted (r)
 * *Stem surface* : fibrous (i), grooves (g), scaly (y), smooth (s), shiny (h), leathery (l), silky (k), sticky (t), wrinkled (w), fleshy (e) or none (f)
 * *Stem color* : brown (n), buff (b), gray (g), green (r), pink (p), purple (u), red (e), white (w), yellow (y), blue (l), orange (o), black (k) or none (f)
@@ -104,30 +104,45 @@ The code, benchmarks and report were run on the following computer configuration
 The code was also tested on a Windows 7 x64 SP1 computer with 16 GB RAM. It was not tested on any Mac OS system.
 \subsection{Data preparation and cleaning}
 \paragraph*{}
-The intial and final structures of the dataset are as following :
+The dataset is directly downloaded from the UCI database in zip format, unzipped and the csv file extracted using the *read.csv* function.
+\paragraph*{}
+The initial and final structures of the dataset are as following :
 ```{r out.width = "90%", echo = FALSE}
 kable(structure_dataset, caption = "Dataset structure")
 ```
-Since the number of values of character variables (*Sex*, *ChestPainType*, *RestingECG* and *ST_Slope*) are limited and well-defined, converting them from character to factors makes sense and will simplify some parts of the data analysis. For the same reason, the values *FastingBS*, *ExerciseAngina* and *HeartDisease* are set to a logical class, which both helps the consistency (*FastingBS* and *HeartDisease* use 0/1 levels, whereas *ExerciceAngina* uses Y/N) and interpretability (TRUE/FALSE is easier to interpret than 0/1 levels).
+The import automatically converted all character variables to factors. The only modification was to modify some of the 2-level factors into logical variables.
 \paragraph*{}
-A basic analysis of the numeric variables also shows some incoherent values, such as zero cholesterol or resting blood pressures. These zeroes are obviously missing values, that were converted to *NA*.
-\paragraph*{}
-We can then get basic information about our population.  
-```{r, echo = FALSE, fig.cap = "Age and cholesterol distributions"}
+We can then get basic information about our mushroom population, such as dimensional distributions.  
+```{r, echo = FALSE, fig.cap = "Mushroom cap diameter, stem height and stem width distribution"}
 plot(ggarrange(
-  plot_distrib_Age,
-  plot_distrib_Cholesterol + ylab("")
-  )
+   ncol = 3,
+   study_distrib_cap.diameter + ggtitle("") + ylab("") + scale_y_continuous(labels = NULL),
+   study_distrib_stem.height + ggtitle("") + ylab("") + scale_y_continuous(labels = NULL),
+   study_distrib_stem.width + ggtitle("") + ylab("") + scale_y_continuous(labels = NULL)
+   )
 )
 ```  
-```{r, echo = FALSE, fig.cap = "Resting blood pressure and maximum heart rate distributions"}
+\paragraph*{}
+All dimensional distributions seem to roughly follow a bell curbe, with a long tail towards the higher values.
+\paragraph*{}
+A logarithmic transformation can help us see the shape of this tail.  
+```{r, echo = FALSE, fig.cap = "Mushroom cap diameter, stem height and stem width distribution"}
 plot(ggarrange(
-  plot_distrib_RestingBP,
-  plot_distrib_MaxHR + ylab("")
-  )
+   ncol = 3,
+   study_distrib_cap.diameter + ggtitle("") + ylab("") + scale_y_log10(labels = NULL),
+   study_distrib_stem.height + ggtitle("") + ylab("") + scale_y_log10(labels = NULL),
+   study_distrib_stem.width + ggtitle("") + ylab("") + scale_y_log10(labels = NULL)
+   )
 )
-```
+```  
+\paragraph*{}
+The cap diameter distribution looks like a right-skewed bell curve but actually is bimodal, with a main mode toward 5 cm, and a much smaller secondary mode toward 50 cm. This size can look quite surprising, but some species such as *Polyporus squamosus* (dryad's saddle) can be very large and weight up to 5 kg.
+\paragraph*{}
+The stem height distribution also looks like a right-skewed bell curve, with a main mode around 5 cm, and a secondary mode at 0 cm. Again, this can look surprising, but some mushrooms have no stem, which could explain this height value.
+\paragraph*{}
+The stem width distribution looks like a right-skewed bell curve, with a peak around 12 mm. In all three distributions, the tail could probably be explained by the impossibility to have negative dimensional values.
 
+\paragraph*{}
 *Section that explains the process and techniques used, including data cleaning, data exploration and visualization, insights gained, and your modeling approach*
 
 \newpage
