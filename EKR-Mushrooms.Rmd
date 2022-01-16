@@ -76,7 +76,7 @@ This dataset contains the data from n = `r summary_number` mushrooms (rows). Eac
 * *Gill color* : brown (n), buff (b), gray (g), green (r), pink (p), purple (u), red (e), white (w), yellow (y), blue (l), orange (o), black (k) or none (f)
 * *Stem height* : in centimeters
 * *Stem width* : in millimeters
-* *Stem root* : bulbous (b), swollen (s), club (c), cup (u), equal (e), rhizomorphs (z), rooted (r) (or none (f))
+* *Stem root* : bulbous (b), swollen (s), club (c), cup (u), equal (e), rhizomorphs (z), rooted (r) or none (f)
 * *Stem surface* : fibrous (i), grooves (g), scaly (y), smooth (s), shiny (h), leathery (l), silky (k), sticky (t), wrinkled (w), fleshy (e) or none (f)
 * *Stem color* : brown (n), buff (b), gray (g), green (r), pink (p), purple (u), red (e), white (w), yellow (y), blue (l), orange (o), black (k) or none (f)
 * *Veil type* : partial (p) or universal (u)
@@ -101,10 +101,10 @@ The code, benchmarks and report were run on the following computer configuration
 * Packages : tidyverse[@R-tidyverse] (v1.3.1), ggrepel[@R-ggrepel] (v0.9.1), ggpubr[@R-ggpubr] (v0.4.0), rmarkdown[@R-rmarkdown] (v2.11), knitr[@R-knitr] (v1.34).
 
 \paragraph*{}
-The code was also tested on a Windows 7 x64 SP1 computer with 16 GB RAM. It was not tested on any Mac OS system.
+The code was also tested on a Windows 7 x64 SP1 computer with 16 GB RAM, and R 4.1.0. It was not tested on any Mac OS system.
 \subsection{Data preparation and cleaning}
 \paragraph*{}
-The dataset is directly downloaded from the UCI database in zip format and unzipped. The archive countains four files :
+The dataset is directly downloaded from the UCI database in zip format and unzipped. The archive contains four files :
 
 * *primary_data.csv* : the csv file with all data used for creating the base. One line for each of the 173 species.
 * *primary_data_meta.txt* : metadata for the primary dataset.

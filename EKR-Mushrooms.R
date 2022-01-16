@@ -13,11 +13,12 @@ library(caret)      # Set of packages for machine learning
 #library(mice)        # Package for filling NA's (Multivariate Imputation by Chained Equations)
 #library(lattice)
 #library(ranger)   # Required by MICE
-#library(evtree)   # for evtree
-#library(fastAdaboost)   # for adaboost
-#library(randomForest)   # for rf
-#library(ranger)   # for ranger
-library(binda) # for ???
+library(evtree)   # for evtree
+library(fastAdaboost)   # for adaboost
+library(randomForest)   # for rf
+library(ranger)   # for ranger
+library(binda) # for binda
+library(DataExplorer)   # For exploratory analysis
 
 # Get, decompress, import data file
 datafile <- tempfile()
@@ -71,6 +72,12 @@ colnames(structure_dataset) <- c("Initial", "Levels", "Final")
 #     INTRODUCTORY ANALYSIS      #
 ##################################
 
+# Exploratory analysis with DataExplorer https://cran.r-project.org/web/packages/DataExplorer/vignettes/dataexplorer-intro.html
+plot_str(dataset)
+plot_bar(dataset)
+
+# With summarytools ? https://cran.r-project.org/web/packages/summarytools/vignettes/introduction.html
+
 # Introductory summaries
 summary_number <- nrow(dataset)  # Mushroom count
 summary_dataset <- summary(dataset) # Basic summary of all categories
@@ -107,11 +114,27 @@ trainvalid_set <- dataset[-test_index,]
 evaluation_set <- dataset[test_index,]
 #rm(dataset)
 
+plot_bar(trainvalid_set, by = "class")
+
+
+
+# Correlation ???
+# library(ggcorrplot)
+# model.matrix(~0+., trainvalid_set) %>% 
+#    cor(use="pairwise.complete.obs") %>% 
+#    ggcorrplot(show.diag = F, type="lower", lab=FALSE)
+
+# Create training and validation sets
+set.seed(1, sample.kind="Rounding")
+test_index <- createDataPartition(y = trainvalid_set$cap.diameter, times = 1, p = 0.1, list = FALSE)
+training_set <- trainvalid_set[-test_index,]
+validation_set <- trainvalid_set[test_index,]
+
 # Plot all monovariate distributions of the training set (poisonous vs edible)
 for (n in 2:l){    # Column 1 (class) isn't plotted since it's the fill attribute
    plot_title <- paste("Mushroom", dataset_names[n], "distribution")
-   plot <- trainvalid_set %>%
-      ggplot(aes_string(x = dataset_names[n], fill = trainvalid_set$class)) + #aes_string allows use of string instead of variable name
+   plot <- training_set %>%
+      ggplot(aes_string(x = dataset_names[n], fill = training_set$class)) + #aes_string allows use of string instead of variable name
       ggtitle(plot_title) +
       ylab("Frequency") +
       xlab(dataset_names[n]) +
@@ -126,59 +149,37 @@ for (n in 2:l){    # Column 1 (class) isn't plotted since it's the fill attribut
 }
 
 # Plot all bivariate distributions of the training set (poisonous vs edible)
-for (n in 2:l){    # Column 1 (class) isn't plotted since it's the color attribute
-   for (m in 2:l){
-      plot <- trainvalid_set %>%
-         ggplot(aes_string(x = dataset_names[n], y = dataset_names[m], color = trainvalid_set$class)) + #aes_string allows use of string instead of variable name
-         labs(colour = "class", x = dataset_names[n], y =dataset_names[m]) + 
-         theme_bw()
-      if(structure_dataset$Final[n] %in% c("integer", "numeric") & structure_dataset$Final[m] %in% c("integer", "numeric"))  # Histogram for 2x integer/numeric,
-         {plot <- plot + geom_point(alpha = .5, shape = 20)} # regular scatterplot if all variables are numeric/integer
-      else
-         {plot <- plot + geom_jitter(alpha = .5, shape = 20)} # jitter if 1 or 2 variables are character/factors/logical
-      if(structure_dataset$Final[n] %in% c("factor", "logical", "character"))
-         {plot <- plot + scale_x_discrete(guide = guide_axis(angle = 90))} # rotate X axis labels if text
-      plotname <- paste0("train_distrib_",dataset_names[n],"_",dataset_names[m])   # Concatenate "train_distrib" with the column names
-      assign(plotname, plot)     # Assign the plot to the train_distrib_colname1_colname2 name
-   }
+#for (n in 2:l){    # Column 1 (class) isn't plotted since it's the color attribute
+#   for (m in 2:l){
+#      plot <- training_set %>%
+#         ggplot(aes_string(x = dataset_names[n], y = dataset_names[m], color = training_set$class)) + #aes_string allows use of string instead of variable name
+#         labs(colour = "class", x = dataset_names[n], y =dataset_names[m]) + 
+#         theme_bw()
+#       if(structure_dataset$Final[n] %in% c("integer", "numeric") & structure_dataset$Final[m] %in% c("integer", "numeric"))  # Histogram for 2x integer/numeric,
+#          {plot <- plot + geom_point(alpha = .5, shape = 20)} # regular scatterplot if all variables are numeric/integer
+#       else
+#          {plot <- plot + geom_jitter(alpha = .5, shape = 20)} # jitter if 1 or 2 variables are character/factors/logical
+#       if(structure_dataset$Final[n] %in% c("factor", "logical", "character"))
+#          {plot <- plot + scale_x_discrete(guide = guide_axis(angle = 90))} # rotate X axis labels if text
+#       plotname <- paste0("train_distrib_",dataset_names[n],"_",dataset_names[m])   # Concatenate "train_distrib" with the column names
+#       assign(plotname, plot)     # Assign the plot to the train_distrib_colname1_colname2 name
+#    }
+# }
+
+
+#https://topepo.github.io/caret/available-models.html
+fit_test <- function(fit_model){
+accuracy <- NULL
+time <- NULL
+start_time <- Sys.time()   # A SUPPRIMER
+fitting <- train(class ~ ., method = fit_model, data = training_set)   # REMPLACER fit_model par "le_modèle" + ajouter paramètres...
+prediction <- predict(fitting, validation_set, type = "raw")
+accuracy <- confusionMatrix(prediction, validation_set$class)$overall[["Accuracy"]]
+end_time <- Sys.time()  # A SUPPRIMER
+time <- difftime(end_time, start_time, units = "secs")  # A SUPPRIMER
+c(accuracy, time)
 }
-
-trainvalid_set %>%
-   ggplot(aes(x = cap.diameter, y = stem.width, color = class)) +
-   #   scale_x_sqrt() + scale_y_sqrt() +
-   geom_point(alpha = .2) +
-   theme_bw()
-
-
-trainvalid_set %>%
-   ggplot(aes(x = cap.shape, y = cap.color, color = class)) +
-   geom_jitter(alpha = .5, shape = 20) +
-   theme_bw()
-
-trainvalid_set %>%
-   ggplot(aes(x = stem.height, y = stem.color, color = class)) +
-   geom_jitter(alpha = .2) +
-   theme_bw()
-
-trainvalid_set %>%
-   ggplot(aes(x = stem.height, y = stem.width, color = class)) +
-   geom_point(alpha = .7) +
-   stat_ellipse(type="norm",  lwd  =  1.5)
-
-# Create training and validation sets
-set.seed(1, sample.kind="Rounding")
-test_index <- createDataPartition(y = trainvalid_set$cap.diameter, times = 1, p = 0.1, list = FALSE)
-training_set <- trainvalid_set[-test_index,]
-validation_set <- trainvalid_set[test_index,]
-
-#knn_fitting <- train(class ~ cap.diameter + cap.shape, method = "knn", data = training_set)
-#knn_prediction <- predict(knn_fitting, validation_set, type = "raw")
-#confusionMatrix(knn_prediction, validation_set$class)$overall[["Accuracy"]]
-#confusionMatrix(knn_prediction, validation_set$class)
-
-glm_fitting <- train(class ~ ., method = "glm", data = training_set)
-glm_prediction <- predict(glm_fitting, validation_set, type = "raw")
-confusionMatrix(glm_prediction, validation_set$class)$overall[["Accuracy"]]
+fit_test("logicBag")
 
 #qda_fitting <- train(class ~ ., method = "qda", data = training_set)
 #qda_prediction <- predict(qda_fitting, validation_set, type = "raw")
@@ -188,6 +189,7 @@ confusionMatrix(glm_prediction, validation_set$class)$overall[["Accuracy"]]
 fitting <- train(class ~ ., method = "rpart", data = training_set, tuneGrid =data.frame(cp =.012))
 fitting <- train(class ~ ., method = "binda", data = training_set)
 fitting <- train(class ~ ., method = "ranger", data = training_set, num.trees = 5)
+fitting <- train(class ~ stem.root + veil.color + stem.height, method = "knn", data = training_set)
 
 prediction <- predict(fitting, validation_set, type = "raw")
 confusionMatrix(prediction, validation_set$class)$overall[["Accuracy"]]
@@ -202,3 +204,29 @@ model_list <- names(getModelInfo())
 
 save.image(file = "EKR-mushrooms.RData")
 load("EKR-mushrooms.RData")
+
+####################################################################
+# Choix modèles avec le plus de dissimilarités
+#https://topepo.github.io/caret/models-clustered-by-tag-similarity.html
+
+# Download caret models tags list, import
+model_tags <- tempfile()
+download.file("https://topepo.github.io/caret/tag_data.csv", model_tags)
+model_tags <- read.csv(model_tags, row.names = 1)
+model_tags <- as.matrix(model_tags)
+
+# Select regression models
+regression_models <- tag[tag[,"Regression"] == 1,]
+
+all <- 1:nrow(regression_models)
+## Seed the analysis with the SVM model
+start <- grep("(svmRadial)", rownames(regression_models), fixed = TRUE)
+pool <- all[all != start]
+
+## Select 4 model models by maximizing the Jaccard dissimilarity between sets of models
+nextMods <- maxDissim(regression_models[start,,drop = FALSE], 
+                      regression_models[pool, ], 
+                      method = "Jaccard",
+                      n = 4)
+
+rownames(regression_models)[c(start, nextMods)]
