@@ -13,11 +13,11 @@ library(caret)      # Set of packages for machine learning
 #library(mice)        # Package for filling NA's (Multivariate Imputation by Chained Equations)
 #library(lattice)
 #library(ranger)   # Required by MICE
-library(evtree)   # for evtree
-library(fastAdaboost)   # for adaboost
-library(randomForest)   # for rf
-library(ranger)   # for ranger
-library(binda) # for binda
+#library(evtree)   # for evtree
+#library(fastAdaboost)   # for adaboost
+#library(randomForest)   # for rf
+#library(ranger)   # for ranger
+#library(binda) # for binda
 library(DataExplorer)   # For exploratory analysis
 
 # Get, decompress, import data file
@@ -169,24 +169,25 @@ for (n in 2:l){    # Column 1 (class) isn't plotted since it's the fill attribut
 
 #https://topepo.github.io/caret/available-models.html
 fit_test <- function(fit_model){
-accuracy <- NULL
-time <- NULL
 start_time <- Sys.time()   # A SUPPRIMER
-fitting <- train(class ~ ., method = fit_model, data = training_set)   # REMPLACER fit_model par "le_modèle" + ajouter paramètres...
+fitting <- NULL
+prediction <- NULL
+accuracy <- NULL
+fitting <- train(class ~ ., method = fit_model, data = training_set) # REMPLACER fit_model par "le_modèle" + ajouter paramètres...
 prediction <- predict(fitting, validation_set, type = "raw")
 accuracy <- confusionMatrix(prediction, validation_set$class)$overall[["Accuracy"]]
 end_time <- Sys.time()  # A SUPPRIMER
 time <- difftime(end_time, start_time, units = "secs")  # A SUPPRIMER
 c(accuracy, time)
 }
-fit_test("logicBag")
+fit_test("LogitBoost")
 
 #qda_fitting <- train(class ~ ., method = "qda", data = training_set)
 #qda_prediction <- predict(qda_fitting, validation_set, type = "raw")
 #confusionMatrix(qda_prediction, validation_set$class)$overall[["Accuracy"]]
 
 #fitting <- train(class ~ ., method = "rpart", tuneGrid  = data.frame(cp = seq(0.005, 0.015, len = 20)), data = training_set)
-fitting <- train(class ~ ., method = "rpart", data = training_set, tuneGrid =data.frame(cp =.012))
+fitting <- train(class ~ ., method = "rpart", data = training_set, tuneGrid=data.frame(cp = .012))
 fitting <- train(class ~ ., method = "binda", data = training_set)
 fitting <- train(class ~ ., method = "ranger", data = training_set, num.trees = 5)
 fitting <- train(class ~ stem.root + veil.color + stem.height, method = "knn", data = training_set)
@@ -195,7 +196,7 @@ prediction <- predict(fitting, validation_set, type = "raw")
 confusionMatrix(prediction, validation_set$class)$overall[["Accuracy"]]
 plot(fitting)
 plot(fitting$finalModel, margin = .1)
-text(fitting$finalModel)
+text(fitting$finalModel, cex = .75)
 #text(fitting$finalModel, cex = .75)
 
 model_list <- names(getModelInfo())
