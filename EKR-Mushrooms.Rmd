@@ -58,9 +58,9 @@ Mushroom identification is a difficult subject, that must **not** be taken light
 \paragraph*{}
 The dataset presented in this study, while being one of the most comprehensive mushrooms datasets in the data science area is by no means comprehensive. 
 \paragraph*{}
-Several genera are not present in this dataset, the most famous one probably being the *psylocybe* genre, known for its psychedelic properties. Several species are only mentioned by their common names, such as *destroying angel*, which may be used for several different species : *Amanita virosa*, *Amanita verna*, *Amanita bisporigera*, *Amanita ocreata*... Several famous species are missing, some of them toxic (*Rubroboletus satanas* or Satan's bolete), some of them delicious (*Amanita caesaria* or  Caesar's mushroom) and easily confused with toxic ones (*Amanita muscaria* or fly agaric, which may lose its white spots, especially after strong rains), or the other way around (the entire *gyromitra* genre is missing, and can be confused with morels). 
+Several genera are not present in this dataset, the most famous one probably being the *psylocybe* genre, known for its psychedelic properties. Several species are only mentioned by their common names, such as *destroying angel*, which may be used for several different species : *Amanita virosa*, *Amanita verna*, *Amanita bisporigera*, *Amanita ocreata*... Several famous species are missing, some of them toxic (*Rubroboletus satanas* or Satan's bolete), some of them delicious (*Amanita caesaria* or Caesar's mushroom) and easily confused with toxic ones (*Amanita muscaria* or fly agaric, which may lose its white spots, especially after strong rains), or the other way around (the entire *gyromitra* genre is missing, and can be confused with morels). 
 \paragraph*{}
-Some very important criteria are missing, such as the hymenophore structure : while most mushrooms have gills, some of them have pores (*Boletacea* for example), and some of them have a smooth or internal hymenial surface (*Lycoperdon*, or puffballs). Some criteria may vary wildly accordingly to the mushroom stage of maturity : while the green hat of the death cap (*Amanita phalloides*) is easily recognizable, young specimen are white and easily confused with edible ones (such as specimens of the *Agaricus* genre).
+Some criteria may also vary wildly accordingly to the mushroom stage of maturity : while the green hats of mature *Amanita phalloides* (death caps) are easily recognizable, young specimens are white and can easily be confused with edible ones (such as specimens of the *Agaricus* genre).
 \paragraph*{}
 Some of these mushrooms are **deadly**, even when eaten in very small amounts. Mushroom poisoning diagnosis can be quite difficult, and often made to late to really act accordingly. Toxic compounds such as amanitins cannot be altered or destroyed by cooking or freezing, and will be absorbed by the intestine, pass into the bloodstream to then filtered by the liver, destroying the liver cells, and then being excreted in the intestines, to be reabsorded, filtered again... each pass destroying the remaining liver cells, in a cycle known as hepato-enteric reabsorption.
 \paragraph*{}
@@ -68,11 +68,11 @@ Do not, **under any circumstances**, use this kind of dataset to determine if a 
 
 \subsection{Goal of the study}
 \paragraph*{}
-Mushroom identification
+Mushroom and plants identification is a
 
 \subsection{The dataset}
 \paragraph*{}
-The Secondary Mushroom Identification Dataset was submitted by Dennis Wagner in 2021, and is inspired by the Mushroom Dataset created by Jeff Schlimmer in 1987. Both datasets aim to create a fictionnal collection of mushrooms, built by gathering characteristics about a selected number of mushroom species, then randomizing each individual mushroom quantitative variables along the species typical characteristics (i.e. cap diameter, stem  height, stem width).  
+The Secondary Mushroom Identification Dataset was submitted by Dennis Wagner in 2021, and is inspired by the Mushroom Dataset created by Jeff Schlimmer in 1987. Both datasets aim to create a fictional collection of mushrooms, built by gathering characteristics about a selected number of mushroom species, then randomizing each individual mushroom quantitative variables along the species typical characteristics (i.e. cap diameter, stem  height, stem width).  
 \paragraph*{}
 
 (a) Mushroom species drawn from source book: Patrick Hardin.Mushrooms & Toadstools. Zondervan, 1999
