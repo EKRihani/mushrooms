@@ -52,6 +52,20 @@ knitr::write_bib(c("tidyverse", "rmarkdown", "knitr", "ggpubr"), "packages.bib")
 ```
 \newpage
 \section{Overview}
+\subsection{A word of caution}
+\paragraph*{}
+Mushroom identification is a difficult subject, that must **not** be taken lightly. The species of mushrooms one may encounter vary considerably from one ecosystem to another, from one continent to another, and no mushroom dataset or book can cover all the diversity of the fungal world.
+\paragraph*{}
+The dataset presented in this study, while being one of the most comprehensive mushrooms datasets in the data science area is by no means comprehensive. 
+\paragraph*{}
+Several genera are not present in this dataset, the most famous one probably being the *psylocybe* genre, known for its psychedelic properties. Several species are only mentioned by their common names, such as *destroying angel*, which may be used for several different species : *Amanita virosa*, *Amanita verna*, *Amanita bisporigera*, *Amanita ocreata*... Several famous species are missing, some of them toxic (*Rubroboletus satanas* or Satan's bolete), some of them delicious (*Amanita caesaria* or  Caesar's mushroom) and easily confused with toxic ones (*Amanita muscaria* or fly agaric, which may lose its white spots, especially after strong rains), or the other way around (the entire *gyromitra* genre is missing, and can be confused with morels). 
+\paragraph*{}
+Some very important criteria are missing, such as the hymenophore structure : while most mushrooms have gills, some of them have pores (*Boletacea* for example), and some of them have a smooth or internal hymenial surface (*Lycoperdon*, or puffballs). Some criteria may vary wildly accordingly to the mushroom stage of maturity : while the green hat of the death cap (*Amanita phalloides*) is easily recognizable, young specimen are white and easily confused with edible ones (such as specimens of the *Agaricus* genre).
+\paragraph*{}
+Some of these mushrooms are **deadly**, even when eaten in very small amounts. Mushroom poisoning diagnosis can be quite difficult, and often made to late to really act accordingly. Toxic compounds such as amanitins cannot be altered or destroyed by cooking or freezing, and will be absorbed by the intestine, pass into the bloodstream to then filtered by the liver, destroying the liver cells, and then being excreted in the intestines, to be reabsorded, filtered again... each pass destroying the remaining liver cells, in a cycle known as hepato-enteric reabsorption.
+\paragraph*{}
+Do not, **under any circumstances**, use this kind of dataset to determine if a mushroom is edible or not.
+
 \subsection{Goal of the study}
 \paragraph*{}
 Mushroom identification
@@ -120,8 +134,9 @@ kable(structure_dataset, caption = "Dataset structure")
 ```
 The import automatically converted all character variables to factors. The only structural modification was to modify some of the 2-level factors into logical variables.
 \paragraph*{}
-The primary and secondary *data_meta* files include all information to translate the one-letter variable codes into comprehensible words. However, one variable code is missing : the *stem.root = f* value isn't explained. Since most *f* values for the other categorical stem variables (*stem.surface*, *stem.color*) mean the mushroom has no stem and given the fact that all stem.root = f values are always associated with *stem.surface = f*, *stem.color = f*, *stem.height = 0* and *stem.width = 0*, one can safely assume that *stem.root = f* isimply means there is no stem.
+The primary and secondary *data_meta* files include all information to translate the one-letter variable codes into comprehensible words. However, one variable code is missing : the *stem.root = f* value isn't explained. Since most *f* values for the other categorical stem variables (*stem.surface*, *stem.color*) mean the mushroom has no stem and given the fact that all stem.root = f values are always associated with *stem.surface = f*, *stem.color = f*, *stem.height = 0* and *stem.width = 0*, one can safely assume that *stem.root = f* simply means there is no stem.
 ```{r out.width = "90%", echo = FALSE}
+
 kable(uniques_missing_f, caption = "Unique values for stem.root = 'f'")
 ```
 \paragraph*{}
