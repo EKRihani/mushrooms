@@ -177,7 +177,7 @@ mono_predict <- function(mushroom){
       stem.width > 60 |
       veil.color == "y"
    )
-   class2 = "edible"
+      class2 = "edible"
 }else{
    class2 = "poisonous"
 }
