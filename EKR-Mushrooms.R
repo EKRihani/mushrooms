@@ -149,38 +149,49 @@ for (n in 2:l){    # Column 1 (class) isn't plotted since it's the fill attribut
 }
 
 #Plot all bivariate distributions of the training set (poisonous vs edible)
-for (n in 2:l){    # Column 1 (class) isn't plotted since it's the color attribute
-  for (m in 2:l){
-     plot <- training_set %>%
-        ggplot(aes_string(x = dataset_names[n], y = dataset_names[m], color = training_set$class)) + #aes_string allows use of string instead of variable name
-        labs(colour = "class", x = dataset_names[n], y =dataset_names[m]) +
-        theme_bw()
-      if(structure_dataset$Final[n] %in% c("integer", "numeric") & structure_dataset$Final[m] %in% c("integer", "numeric"))  # Histogram for 2x integer/numeric,
-         {plot <- plot + geom_point(alpha = .5, shape = 20)} # regular scatterplot if all variables are numeric/integer
-      else
-         {plot <- plot + geom_jitter(alpha = .5, shape = 20)} # jitter if 1 or 2 variables are character/factors/logical
-      if(structure_dataset$Final[n] %in% c("factor", "logical", "character"))
-         {plot <- plot + scale_x_discrete(guide = guide_axis(angle = 90))} # rotate X axis labels if text
-      plotname <- paste0("train_distrib_",dataset_names[n],"_",dataset_names[m])   # Concatenate "train_distrib" with the column names
-      assign(plotname, plot)     # Assign the plot to the train_distrib_colname1_colname2 name
-   }
-}
+# for (n in 2:l){    # Column 1 (class) isn't plotted since it's the color attribute
+#   for (m in 2:l){
+#      plot <- training_set %>%
+#         ggplot(aes_string(x = dataset_names[n], y = dataset_names[m], color = training_set$class)) + #aes_string allows use of string instead of variable name
+#         labs(colour = "class", x = dataset_names[n], y =dataset_names[m]) +
+#         theme_bw()
+#       if(structure_dataset$Final[n] %in% c("integer", "numeric") & structure_dataset$Final[m] %in% c("integer", "numeric"))  # Histogram for 2x integer/numeric,
+#          {plot <- plot + geom_point(alpha = .5, shape = 20)} # regular scatterplot if all variables are numeric/integer
+#       else
+#          {plot <- plot + geom_jitter(alpha = .5, shape = 20)} # jitter if 1 or 2 variables are character/factors/logical
+#       if(structure_dataset$Final[n] %in% c("factor", "logical", "character"))
+#          {plot <- plot + scale_x_discrete(guide = guide_axis(angle = 90))} # rotate X axis labels if text
+#       plotname <- paste0("train_distrib_",dataset_names[n],"_",dataset_names[m])   # Concatenate "train_distrib" with the column names
+#       assign(plotname, plot)     # Assign the plot to the train_distrib_colname1_colname2 name
+#    }
+# }
 
-mono_predict <- function(mushroom){
-   mushroom %>% if(
-      cap.diameter > 35 |
-      habitat %in% c(u, w) |
-      ring.type =="m" |
-      spore.print.color =="g" |
-      stem.color == "b" |
-      stem.height > 21 |
-      stem.width > 60 |
-      veil.color == "y"
-   )
-      class2 = "edible"
-}else{
-   class2 = "poisonous"
-}
+predictions <- validation_set
+predictions$edible <- as.logical(as.character(recode_factor(predictions$class, edible = TRUE, poisonous = FALSE))) # Switch to logical values
+predictions$stupid_predict = FALSE   # Consider all mushrooms as poisonous
+predictions <- predictions %>% 
+   mutate(mono_predict = (cap.diameter > 35 | habitat %in% c("urban", "waste") | ring.type =="movable" | spore.print.color =="gray" | 
+                                 stem.color == "buff" | stem.height > 21 | stem.width > 60 | veil.color == "yellow"))
+predictions <- predictions %>% 
+   mutate(bi_predict = (cap.diameter > 35 | habitat %in% c("urban", "waste") | ring.type =="movable" | spore.print.color =="gray" | 
+                             stem.color == "buff" | stem.height > 21 | stem.width > 60 | veil.color == "yellow" | 
+                           cap.color == "buff" & (cap.diameter > 10 | cap.surface == "fleshy" | gill.attachment == "" | gill.color %in% c("buff", "purple", "orange") | gill.spacing == "distant" | habitat %in% c("grasses", "meadows") | has.ring == TRUE | season == "winter") | 
+                           cap.color == "blue" & (cap.diameter > 7 | cap.shape == "sunken" | cap.surface %in% c("fleshy", "") | gill.attachment %in% c("adnexed", "decurrent") | gill.color %in% c("buff", "green", "yellow") | habitat == "leaves" | season == "winter") | 
+                           cap.color == "gray" & (cap.shape == "conical" | cap.surface %in% c("grooves", "wrinkled", "fleshy", "d") | gill.attachment == "pores" | ring.type == "large") | 
+                           cap.color == "red" & (cap.shape %in% c("conical", "spherical") | gill.color == "orange" | habitat == "heaths" | ring.type == "") | 
+                           cap.color == "orange" & (cap.shape == "spherical" | gill.attachment == "sinuate" | gill.color %in% c("buff", "red") | gill.spacing == "distant") | 
+                           cap.color == "pink" & (cap.surface %in% c("smooth", "shiny") | gill.color %in% c("red", "orange")) | 
+                           cap.color == "purple" & (cap.surface %in% c("smooth", "d") | gill.attachment %in% c("decurrent", "") | gill.color %in% c("buff", "pink") | gill.spacing == "distant" | season == "winter") |
+                           cap.color == "white" & (cap.surface == "leathery" | gill.color %in% c("orange", "purple") | ring.type %in% c("flaring", "grooved", "")) |
+                           cap.color == "yellow" & (gill.attachment == "free" | gill.color == "purple" | ring.type %in% c("evanescent", "grooved")) |
+                           cap.color == "black" & (cap.surface == "shiny" | gill.attachment == "sinuate" | gill.spacing == "distant")
+                        )
+          ) # IDENTIFIER CAP.SURFACE = "D" ????
+
+mean(predictions$edible == predictions$stupid_predict)   # Accuracy of the "all poisonous" model
+mean(predictions$edible == predictions$mono_predict)     # Accuracy of the single criterion model
+mean(predictions$edible == predictions$bi_predict)     # Accuracy of the double criterion model
+
 
 #https://topepo.github.io/caret/available-models.html
 fit_test <- function(fit_model){
