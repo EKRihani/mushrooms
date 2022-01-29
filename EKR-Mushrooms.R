@@ -9,17 +9,9 @@ if(!require(caret)) install.packages("caret", repos = "http://cran.us.r-project.
 # Load required libraries
 library(tidyverse)      # Set of packages used in everyday data analyses
 library(caret)      # Set of packages for machine learning
-#library(data.table)
-#library(mice)        # Package for filling NA's (Multivariate Imputation by Chained Equations)
-#library(lattice)
-#library(ranger)   # Required by MICE
-#library(evtree)   # for evtree
-#library(fastAdaboost)   # for adaboost
-#library(randomForest)   # for rf
-#library(ranger)   # for ranger
-#library(binda) # for binda
 library(DataExplorer)   # For exploratory analysis
 library(RColorBrewer)     # ggplot2 palettes
+library(GGally)      # Correlation plots
 
 # Get, decompress, import data file
 datafile <- tempfile()
@@ -143,7 +135,7 @@ for (n in 2:l){    # Column 1 (class) isn't plotted since it's the fill attribut
       ylab("Frequency") +
       xlab(dataset_names[n]) +
       scale_y_log10() +
-      scale_color_brewer(palette = "Set1", direction = -1) +
+#      scale_color_brewer(palette = "Set1", direction = -1) +
       theme_bw()
    if(structure_dataset$Final[n] %in% c("integer", "numeric"))  # Histogram for integer/numeric, Barplot for character/factors/logical
    {plot <- plot + geom_histogram()}
@@ -164,7 +156,7 @@ for (n in 2:l){    # Column 1 (class) isn't plotted since it's the color attribu
      plot <- training_set %>%
         ggplot(aes_string(x = dataset_reduced_names[n], y = dataset_reduced_names[m], color = training_set$class)) + #aes_string allows use of string instead of variable name
         labs(colour = "class", x = dataset_reduced_names[n], y =dataset_reduced_names[m]) +
-        scale_color_brewer(palette = "Set1", direction = -1) +
+#        scale_color_brewer(palette = "Set1", direction = -1) +
         theme_bw()
       if(structure_dataset_reduced$Final[n] %in% c("integer", "numeric") & structure_dataset_reduced$Final[m] %in% c("integer", "numeric"))  # Histogram for 2x integer/numeric,
          {plot <- plot + geom_point(alpha = .4, shape = 20, size =2)} # regular scatterplot if all variables are numeric/integer
@@ -177,32 +169,62 @@ for (n in 2:l){    # Column 1 (class) isn't plotted since it's the color attribu
    }
 }
 
+# Graphiques corrélations avec ggpairs.
+ggpairs(
+   training_set,
+   columns = c(2,6,7,10,11),
+   lower = NULL,
+    diag = list(continuous = wrap("densityDiag", alpha = .6), 
+                discrete = wrap("barDiag")
+                ),
+   upper = list(continuous = wrap("points", alpha = .3, shape = 20), 
+                combo = wrap("dot", alpha = .3, shape = 20),
+                discrete = wrap("dot_no_facet", alpha = .3, shape = 20)
+               ),
+   ggplot2::aes(color = class)
+   )
+
+
+single_criteria <- data.frame(criteria = c("cap.diameter", "habitat", "habitat", "ring.type", "spore.print.color", "stem.color", "stem.height", "stem.width", "veil.color"),
+                              value = c("> 35", "== 'urban'", "== 'waste'", "== 'movable'", "== 'gray'", "== 'buff'", "> 21", "> 60", "== 'yellow'")
+                              )
+
+double_criteria <- data.frame(criteria1 = c("gill.spacing", "gill.spacing", "gill.spacing", "gill.spacing", "season", "season", "veil.type", "veil.type", "stem.root", "stem.root", "stem.root", "stem.root", "stem.root", "stem.root", "stem.root", "stem.root"),
+                              value1 = c("== 'distant'", "== 'distant'", "== 'close'", "== 'none'", "== 'spring'", "== 'summer'", "== 'universal'", "== 'universal'", "== 'bulbous'", "== 'bulbous'", "== 'bulbous'", "== 'bulbous'", "== 'bulbous'", "== 'bulbous'", "== 'bulbous'", "== 'swollen'"),
+                              criteria2 = c("has.ring", "season", "stem.height", "stem.width", "stem.width", "stem.width", "has.ring", "does.bruise.or.bleed", "does.bruise.or.bleed", "veil.type", "has.ring", "season", "gill.spacing", "stem.height", "stem.width", "stem.width"),
+                              value2 = c("== TRUE", "== 'spring'", "> 16", "> 40", "> 29", "> 47", "== FALSE", "== TRUE", "== TRUE", "== 'universal'", "== TRUE", "== 'spring'", "== ''", "> 8", "> 20", "> 18")
+                              )
+
+mono_criteria_list <- paste(single_criteria$criteria, single_criteria$value, collapse = " | ")
+double_criteria_list <- paste("(", double_criteria$criteria1, double_criteria$value1, "&", double_criteria$criteria2, double_criteria$value2, ")",collapse = " | ")
+bi_criteria_list <- paste(single_criteria_list, "|", double_criteria_list)
+
 predictions <- validation_set
 predictions$edible <- as.logical(as.character(recode_factor(predictions$class, edible = TRUE, poisonous = FALSE))) # Switch to logical values
 predictions$stupid_predict = FALSE   # Consider all mushrooms as poisonous
-predictions <- predictions %>% 
-   mutate(mono_predict = (cap.diameter > 35 | habitat %in% c("urban", "waste") | ring.type =="movable" | spore.print.color =="gray" | 
-                                 stem.color == "buff" | stem.height > 21 | stem.width > 60 | veil.color == "yellow"))
-predictions <- predictions %>% 
-   mutate(bi_predict = (gill.spacing == "distant" & (has.ring == TRUE | season == "spring") |
-                        gill.spacing == "close" & stem.height > 16 |
-                        gill.spacing == "none" & stem.width > 40 |
-                        season == "spring" & stem.width > 29 |
-                        season == "summer" & stem.width > 47 |
-                        veil.type == "universal" & (has.ring == FALSE | does.bruise.or.bleed == TRUE) |
-                        stem.height > 9 & stem.width > 40 |
-                        stem.height > 15 & stem.width > 30 |
-                        stem.root == "bulbous" & (does.bruise.or.bleed == TRUE | veil.type == "universal" | has.ring == TRUE | season == "spring" | gill.spacing == "" | stem.height > 8 | stem.width > 20) |
-                        stem.root == "swollen" & (stem.width > 18) #|
-                        # cap.shape == "sunken" & stem.root %in% c("bulbous", "swollen") |
-                        # cap.shape == "conical" & (stem.height > 10 | veil.type == "universal" | gill.spacing == "none") |
-                        # cap.shape == "flat" & season == "spring" |
-                        # cap.shape == "bell" & gill.spacing == "distant" |
-                        # cap.shape == "other" & (stem.height > 8 | stem.width > 39) |
-                        # cap.shape == "spherical" & (stem.root == "swollen" | does.bruise.or.bleed == TRUE | stem.width > 38 | cap.diameter > 17 | gill.spacing == "none") |
-                        # veil.color == "white" & (stem.width > 21 | does.bruise.or.bleed == TRUE | stem.root == "bulbous" | cap.shape == "conical")
-                        )
-          )
+predictions <- predictions %>% mutate(mono_predict = eval(parse(text = mono_criteria_list)))
+predictions <- predictions %>% mutate(bi_predict = eval(parse(text = bi_criteria_list)))
+
+# predictions <- predictions %>%
+#    mutate(bi_predict = (gill.spacing == "distant" & (has.ring == TRUE | season == "spring") |
+#                         gill.spacing == "close" & stem.height > 16 |
+#                         gill.spacing == "none" & stem.width > 40 |
+#                         season == "spring" & stem.width > 29 |
+#                         season == "summer" & stem.width > 47 |
+#                         veil.type == "universal" & (has.ring == FALSE | does.bruise.or.bleed == TRUE) |
+#                         stem.height > 9 & stem.width > 40 |
+#                         stem.height > 15 & stem.width > 30 |
+#                         stem.root == "bulbous" & (does.bruise.or.bleed == TRUE | veil.type == "universal" | has.ring == TRUE | season == "spring" | gill.spacing == "" | stem.height > 8 | stem.width > 20) |
+#                         stem.root == "swollen" & (stem.width > 18) #|
+#                         # cap.shape == "sunken" & stem.root %in% c("bulbous", "swollen") |
+#                         # cap.shape == "conical" & (stem.height > 10 | veil.type == "universal" | gill.spacing == "none") |
+#                         # cap.shape == "flat" & season == "spring" |
+#                         # cap.shape == "bell" & gill.spacing == "distant" |
+#                         # cap.shape == "other" & (stem.height > 8 | stem.width > 39) |
+#                         # cap.shape == "spherical" & (stem.root == "swollen" | does.bruise.or.bleed == TRUE | stem.width > 38 | cap.diameter > 17 | gill.spacing == "none") |
+#                         # veil.color == "white" & (stem.width > 21 | does.bruise.or.bleed == TRUE | stem.root == "bulbous" | cap.shape == "conical")
+#                         )
+#           )
 
 mean(predictions$edible == predictions$stupid_predict)   # Accuracy of the "all poisonous" model
 mean(predictions$edible == predictions$mono_predict)     # Accuracy of the single criterion model
