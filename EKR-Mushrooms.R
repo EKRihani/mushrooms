@@ -19,6 +19,7 @@ library(caret)      # Set of packages for machine learning
 #library(ranger)   # for ranger
 #library(binda) # for binda
 library(DataExplorer)   # For exploratory analysis
+library(RColorBrewer)     # ggplot2 palettes
 
 # Get, decompress, import data file
 datafile <- tempfile()
@@ -35,6 +36,7 @@ dataset <- read.csv(datafile, header = TRUE, sep = ";")
 structure_initial <- sapply(X = dataset, FUN = class, simplify = TRUE) # Get all initial dataset variables classes
 unique_length <- function (x) {length(unique(x))}  # Define function : count levels of a variable
 structure_uniques <- sapply(dataset, FUN = unique_length) # Count levels of all dataset variables
+
 
 # What is stem.root = f ? The metadata doesn't indicate it, let's find out...
 data_missing_f <- dataset %>% filter(stem.root == "f") %>% select(stem.root, stem.color, stem.surface, stem.width, stem.height) # select all useful (i.e. stem) properties
@@ -67,6 +69,7 @@ structure_final <- sapply(X = dataset, FUN = class, simplify = TRUE) # Get all f
 # Merge initial and final dataset structure information
 structure_dataset <- data.frame(cbind(structure_initial, structure_uniques, structure_final))
 colnames(structure_dataset) <- c("Initial", "Levels", "Final")
+structure_dataset$Levels <- as.numeric(structure_dataset$Levels)
 
 ##################################
 #     INTRODUCTORY ANALYSIS      #
@@ -130,6 +133,7 @@ test_index <- createDataPartition(y = trainvalid_set$cap.diameter, times = 1, p 
 training_set <- trainvalid_set[-test_index,]
 validation_set <- trainvalid_set[test_index,]
 
+
 # Plot all monovariate distributions of the training set (poisonous vs edible)
 for (n in 2:l){    # Column 1 (class) isn't plotted since it's the fill attribute
    plot_title <- paste("Mushroom", dataset_names[n], "distribution")
@@ -139,6 +143,7 @@ for (n in 2:l){    # Column 1 (class) isn't plotted since it's the fill attribut
       ylab("Frequency") +
       xlab(dataset_names[n]) +
       scale_y_log10() +
+      scale_color_brewer(palette = "Set1", direction = -1) +
       theme_bw()
    if(structure_dataset$Final[n] %in% c("integer", "numeric"))  # Histogram for integer/numeric, Barplot for character/factors/logical
    {plot <- plot + geom_histogram()}
@@ -148,20 +153,26 @@ for (n in 2:l){    # Column 1 (class) isn't plotted since it's the fill attribut
    assign(plotname, plot)     # Assign the plot to the train_distrib_colname name
 }
 
+# For bivariate analysis : reduced dataset factor names list (<= 6 levels or numeric)
+structure_dataset_reduced <- structure_dataset %>% filter(Levels <= 6 | Final == "numeric")
+dataset_reduced_names <-  rownames(structure_dataset_reduced)
+l <- length(dataset_reduced_names)
+
 #Plot all bivariate distributions of the training set (poisonous vs edible)
 for (n in 2:l){    # Column 1 (class) isn't plotted since it's the color attribute
   for (m in 2:l){
      plot <- training_set %>%
-        ggplot(aes_string(x = dataset_names[n], y = dataset_names[m], color = training_set$class)) + #aes_string allows use of string instead of variable name
-        labs(colour = "class", x = dataset_names[n], y =dataset_names[m]) +
+        ggplot(aes_string(x = dataset_reduced_names[n], y = dataset_reduced_names[m], color = training_set$class)) + #aes_string allows use of string instead of variable name
+        labs(colour = "class", x = dataset_reduced_names[n], y =dataset_reduced_names[m]) +
+        scale_color_brewer(palette = "Set1", direction = -1) +
         theme_bw()
-      if(structure_dataset$Final[n] %in% c("integer", "numeric") & structure_dataset$Final[m] %in% c("integer", "numeric"))  # Histogram for 2x integer/numeric,
-         {plot <- plot + geom_point(alpha = .5, shape = 20)} # regular scatterplot if all variables are numeric/integer
+      if(structure_dataset_reduced$Final[n] %in% c("integer", "numeric") & structure_dataset_reduced$Final[m] %in% c("integer", "numeric"))  # Histogram for 2x integer/numeric,
+         {plot <- plot + geom_point(alpha = .4, shape = 20, size =2)} # regular scatterplot if all variables are numeric/integer
       else
-         {plot <- plot + geom_jitter(alpha = .5, shape = 20)} # jitter if 1 or 2 variables are character/factors/logical
-      if(structure_dataset$Final[n] %in% c("factor", "logical", "character"))
+         {plot <- plot + geom_jitter(alpha = .4, shape = 20, size = 2)} # jitter if 1 or 2 variables are character/factors/logical
+      if(structure_dataset_reduced$Final[n] %in% c("factor", "logical", "character"))
          {plot <- plot + scale_x_discrete(guide = guide_axis(angle = 90))} # rotate X axis labels if text
-      plotname <- paste0("train_distrib_",dataset_names[n],"_",dataset_names[m])   # Concatenate "train_distrib" with the column names
+      plotname <- paste0("train_distrib_",dataset_reduced_names[n],"_",dataset_reduced_names[m])   # Concatenate "train_distrib" with the column names
       assign(plotname, plot)     # Assign the plot to the train_distrib_colname1_colname2 name
    }
 }
@@ -173,20 +184,25 @@ predictions <- predictions %>%
    mutate(mono_predict = (cap.diameter > 35 | habitat %in% c("urban", "waste") | ring.type =="movable" | spore.print.color =="gray" | 
                                  stem.color == "buff" | stem.height > 21 | stem.width > 60 | veil.color == "yellow"))
 predictions <- predictions %>% 
-   mutate(bi_predict = (cap.diameter > 35 | habitat %in% c("urban", "waste") | ring.type =="movable" | spore.print.color =="gray" | 
-                             stem.color == "buff" | stem.height > 21 | stem.width > 60 | veil.color == "yellow" | 
-                           cap.color == "buff" & (cap.diameter > 10 | cap.surface == "fleshy" | gill.attachment == "" | gill.color %in% c("buff", "purple", "orange") | gill.spacing == "distant" | habitat %in% c("grasses", "meadows") | has.ring == TRUE | season == "winter") | 
-                           cap.color == "blue" & (cap.diameter > 7 | cap.shape == "sunken" | cap.surface %in% c("fleshy", "") | gill.attachment %in% c("adnexed", "decurrent") | gill.color %in% c("buff", "green", "yellow") | habitat == "leaves" | season == "winter") | 
-                           cap.color == "gray" & (cap.shape == "conical" | cap.surface %in% c("grooves", "wrinkled", "fleshy", "d") | gill.attachment == "pores" | ring.type == "large") | 
-                           cap.color == "red" & (cap.shape %in% c("conical", "spherical") | gill.color == "orange" | habitat == "heaths" | ring.type == "") | 
-                           cap.color == "orange" & (cap.shape == "spherical" | gill.attachment == "sinuate" | gill.color %in% c("buff", "red") | gill.spacing == "distant") | 
-                           cap.color == "pink" & (cap.surface %in% c("smooth", "shiny") | gill.color %in% c("red", "orange")) | 
-                           cap.color == "purple" & (cap.surface %in% c("smooth", "d") | gill.attachment %in% c("decurrent", "") | gill.color %in% c("buff", "pink") | gill.spacing == "distant" | season == "winter") |
-                           cap.color == "white" & (cap.surface == "leathery" | gill.color %in% c("orange", "purple") | ring.type %in% c("flaring", "grooved", "")) |
-                           cap.color == "yellow" & (gill.attachment == "free" | gill.color == "purple" | ring.type %in% c("evanescent", "grooved")) |
-                           cap.color == "black" & (cap.surface == "shiny" | gill.attachment == "sinuate" | gill.spacing == "distant")
+   mutate(bi_predict = (gill.spacing == "distant" & (has.ring == TRUE | season == "spring") |
+                        gill.spacing == "close" & stem.height > 16 |
+                        gill.spacing == "none" & stem.width > 40 |
+                        season == "spring" & stem.width > 29 |
+                        season == "summer" & stem.width > 47 |
+                        veil.type == "universal" & (has.ring == FALSE | does.bruise.or.bleed == TRUE) |
+                        stem.height > 9 & stem.width > 40 |
+                        stem.height > 15 & stem.width > 30 |
+                        stem.root == "bulbous" & (does.bruise.or.bleed == TRUE | veil.type == "universal" | has.ring == TRUE | season == "spring" | gill.spacing == "" | stem.height > 8 | stem.width > 20) |
+                        stem.root == "swollen" & (stem.width > 18) #|
+                        # cap.shape == "sunken" & stem.root %in% c("bulbous", "swollen") |
+                        # cap.shape == "conical" & (stem.height > 10 | veil.type == "universal" | gill.spacing == "none") |
+                        # cap.shape == "flat" & season == "spring" |
+                        # cap.shape == "bell" & gill.spacing == "distant" |
+                        # cap.shape == "other" & (stem.height > 8 | stem.width > 39) |
+                        # cap.shape == "spherical" & (stem.root == "swollen" | does.bruise.or.bleed == TRUE | stem.width > 38 | cap.diameter > 17 | gill.spacing == "none") |
+                        # veil.color == "white" & (stem.width > 21 | does.bruise.or.bleed == TRUE | stem.root == "bulbous" | cap.shape == "conical")
                         )
-          ) # IDENTIFIER CAP.SURFACE = "D" ????
+          )
 
 mean(predictions$edible == predictions$stupid_predict)   # Accuracy of the "all poisonous" model
 mean(predictions$edible == predictions$mono_predict)     # Accuracy of the single criterion model
