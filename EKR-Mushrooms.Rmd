@@ -21,15 +21,42 @@ references:
     type: article-journal
     issued:
       year: 2021
+  - id: mushroom2b
+    title: "Mushrooms & Toadstools"
+    author: P.Hardin
+    url: https://doi.org/10.1038/s41598-021-87602-3
+    DOI: 10.1038/s41598-021-87602-3
+    publisher: Collins
+    type: book
+    issued:
+      year: 2012
   - id: mushroom1
-    title: "Concept Acquisition Through Representational Adjustment"
-    author: D.Wagner, D.Heider, G.Hattab
-    url: 
+    title: "Mushroom Data Set"
+    author: J.Schlimmer
+    url: https://archive.ics.uci.edu/ml/datasets/Mushroom
     DOI: 
     publisher: University of California
     type: article-journal
     issued:
       year: 1987
+  - id: mushroom1b
+    title: "The Audubon Society Field Guide to North American Mushrooms"
+    author: G. H. Lincoff
+    url: 
+    DOI: 
+    publisher: Alfred A. Knopf
+    type: book
+    issued:
+      year: 1987
+  - id: courtecuisse
+    title: "Mushrooms and Toadstools"
+    author: R.Courtecuisse, B. Duhem
+    url: 
+    DOI: 
+    publisher: Collins
+    type: book
+    issued:
+      year: 1995
 
 csl: https://www.zotero.org/styles/vancouver-superscript
 #- \usepackage{indentfirst} # Indent first line of each paragraph
@@ -72,17 +99,14 @@ Mushroom and plants identification is a
 
 \subsection{The dataset}
 \paragraph*{}
-The Secondary Mushroom Identification Dataset was submitted by Dennis Wagner in 2021, and is inspired by the Mushroom Dataset created by Jeff Schlimmer in 1987. Both datasets aim to create a fictional collection of mushrooms, built by gathering characteristics about a selected number of mushroom species, then randomizing each individual mushroom quantitative variables along the species typical characteristics (i.e. cap diameter, stem  height, stem width).  
-\paragraph*{}
-
-(a) Mushroom species drawn from source book: Patrick Hardin.Mushrooms & Toadstools. Zondervan, 1999
+The Secondary Mushroom Identification Dataset was submitted by Dennis Wagner in 2021[@mushroom2][@mushroom2b], and is inspired by the Mushroom Dataset created by Jeff Schlimmer in 1987[@mushroom1][@mushroom1b]. Both datasets aim to create a fictional collection of mushrooms, built by gathering characteristics about a selected number of mushroom species, then randomizing each individual mushroom quantitative variables along the species typical characteristics (i.e. cap diameter, stem  height, stem width).  
 \paragraph*{}
 This dataset contains the data from n = `r summary_number` mushrooms (rows). Each mushroom has `r nrow(structure_dataset)` attributes (columns) :
 \paragraph*{}
 * *Class* : edible (e) or poisonous (p)
 * *Cap diameter* : in centimeters
 * *Cap shape* : bell (b), conical (c), convex (x), flat (f), sunken (s), spherical (p) or other (o)
-* *Cap surface* : fibrous (i), grooves (g), scaly (y), smooth (s), shiny (h), leathery (l), silky (k), sticky (t), wrinkled (w) or fleshy (e)
+* *Cap surface* : fibrous (i), grooves (g), scaly (y), smooth (s), shiny (h), leathery (l), silky (k), sticky (t), wrinkled (w), downy (d) or fleshy (e)
 * *Cap color* : brown (n), buff (b), gray (g), green (r), pink (p), purple (u), red (e), white (w), yellow (y), blue (l), orange (o) or black (k)
 * *Does bruise or bleed* : true (t) or false (f)
 * *Gill attachment* : adnate (a), adnexed (x), decurrent (d), free (e), sinuate (s), pores (p), none (f), unknown (?)
@@ -134,13 +158,21 @@ kable(structure_dataset, caption = "Dataset structure")
 ```
 The import automatically converted all character variables to factors. The only structural modification was to modify some of the 2-level factors into logical variables.
 \paragraph*{}
-The primary and secondary *data_meta* files include all information to translate the one-letter variable codes into comprehensible words. However, one variable code is missing : the *stem.root = f* value isn't explained. Since most *f* values for the other categorical stem variables (*stem.surface*, *stem.color*) mean the mushroom has no stem and given the fact that all stem.root = f values are always associated with *stem.surface = f*, *stem.color = f*, *stem.height = 0* and *stem.width = 0*, one can safely assume that *stem.root = f* simply means there is no stem.
+The primary and secondary *data_meta* files include all information to translate the one-letter variable codes into comprehensible words. However, two variable codes are missing.
+\paragraph*{}
+Firstly, the *stem.root = f* value isn't explained. Since most *f* values for the other categorical stem variables (*stem.surface*, *stem.color*) mean the mushroom has no stem and given the fact that all stem.root = f values are always associated with *stem.surface = f*, *stem.color = f*, *stem.height = 0* and *stem.width = 0*, one can safely assume that *stem.root = f* simply means there is no stem.
 ```{r out.width = "90%", echo = FALSE}
 
 kable(uniques_missing_f, caption = "Unique values for stem.root = 'f'")
 ```
 \paragraph*{}
-We can then get basic information about our mushroom population, such as dimensional distributions.  
+Secondly, the *cap.surface = d* value isn't explain either. There was no workaround to lift this uncertainty except from performing some searches : digging into the primary dataset, finding all the mushrooms that may have the value *cap.surface = d*, translating the common english name into the scientific (latin) ones and finding the relevant descriptions in mycology books.[@courtecuisse]
+\paragraph*{}
+This research showed all these mushrooms to have a velvety, or downy surface. A value d = downy was thus assumed.
+\paragraph*{}
+These issues underline why it is important to provide extensive documentation, well-defined variables and values in every datasets and to follow international standards (such as latin names). Fortunately, the author provides the primary dataset with the characteristics of all species; without that file, it would have been impossible to find what characteristic lied under the *cap.surface = d* value.
+\paragraph*{}
+After this data cleaning and editing steps, we can get basic information about our mushroom population, such as dimensional distributions.  
 ```{r, echo = FALSE, fig.cap = "Mushroom cap diameter, stem height and stem width distribution"}
 plot(ggarrange(
    ncol = 3,
