@@ -16,9 +16,11 @@ library(GGally)      # Correlation plots
 # Get, decompress, import data file
 datafile <- tempfile()
 download.file("https://archive.ics.uci.edu/ml/machine-learning-databases/00615/MushroomDataset.zip", datafile)
-#datafile <- "~/projects/mushrooms/MushroomDataset.zip"    # Use Local File (faster)
+#datafile <- "~/projects/mushrooms/MushroomDataset.zip"    # Fichier local, A ENLEVER
 datafile <- unzip(datafile, "MushroomDataset/secondary_data.csv")
 dataset <- read.csv(datafile, header = TRUE, sep = ";")
+
+
 
 ################################
 #  DATA FORMATTING / CLEANING  #
@@ -30,7 +32,7 @@ unique_length <- function (x) {length(unique(x))}  # Define function : count lev
 structure_uniques <- sapply(dataset, FUN = unique_length) # Count levels of all dataset variables
 
 
-# What is stem.root = f ? The metadata doesn't indicate it, let's find out...
+# What is "stem.root = f" ? The metadata doesn't indicate it, let's find out...
 data_missing_f <- dataset %>% filter(stem.root == "f") %>% select(stem.root, stem.color, stem.surface, stem.width, stem.height) # select all useful (i.e. stem) properties
 uniques_missing_f <- unique(data_missing_f)
 
@@ -62,6 +64,8 @@ structure_final <- sapply(X = dataset, FUN = class, simplify = TRUE) # Get all f
 structure_dataset <- data.frame(cbind(structure_initial, structure_uniques, structure_final))
 colnames(structure_dataset) <- c("Initial", "Levels", "Final")
 structure_dataset$Levels <- as.numeric(structure_dataset$Levels)
+
+
 
 ##################################
 #     INTRODUCTORY ANALYSIS      #
@@ -98,9 +102,11 @@ for (n in 1:l){
    assign(plotname, plot)     # Assign the plot to the plot_distrib_colname name
 }
 
-############################
-#     MACHINE TRAINING     #
-############################
+
+
+##########################################################
+#     TRAINING, VALIDATION, EVALUATION SETS CREATION     #
+##########################################################
 
 # Create training and evaluation sets
 set.seed(1, sample.kind="Rounding")
@@ -111,20 +117,17 @@ evaluation_set <- dataset[test_index,]
 
 plot_bar(trainvalid_set, by = "class")
 
-
-
-# Correlation ???
-# library(ggcorrplot)
-# model.matrix(~0+., trainvalid_set) %>% 
-#    cor(use="pairwise.complete.obs") %>% 
-#    ggcorrplot(show.diag = F, type="lower", lab=FALSE)
-
 # Create training and validation sets
 set.seed(1, sample.kind="Rounding")
 test_index <- createDataPartition(y = trainvalid_set$cap.diameter, times = 1, p = 0.1, list = FALSE)
 training_set <- trainvalid_set[-test_index,]
 validation_set <- trainvalid_set[test_index,]
 
+
+
+#############################################
+#     DESCRIPTIVE TRAINING SET ANALYSIS     #
+#############################################
 
 # Plot all monovariate distributions of the training set (poisonous vs edible)
 for (n in 2:l){    # Column 1 (class) isn't plotted since it's the fill attribute
@@ -184,7 +187,7 @@ ggpairs(
    ggplot2::aes(color = class)
    )
 
-
+# Create criteria lists for single and dual variable classification
 single_criteria <- data.frame(criteria = c("cap.diameter", "habitat", "habitat", "ring.type", "spore.print.color", "stem.color", "stem.height", "stem.width", "veil.color"),
                               value = c("> 35", "== 'urban'", "== 'waste'", "== 'movable'", "== 'gray'", "== 'buff'", "> 21", "> 60", "== 'yellow'")
                               )
@@ -192,44 +195,33 @@ single_criteria <- data.frame(criteria = c("cap.diameter", "habitat", "habitat",
 double_criteria <- data.frame(criteria1 = c("gill.spacing", "gill.spacing", "gill.spacing", "gill.spacing", "season", "season", "veil.type", "veil.type", "stem.root", "stem.root", "stem.root", "stem.root", "stem.root", "stem.root", "stem.root", "stem.root"),
                               value1 = c("== 'distant'", "== 'distant'", "== 'close'", "== 'none'", "== 'spring'", "== 'summer'", "== 'universal'", "== 'universal'", "== 'bulbous'", "== 'bulbous'", "== 'bulbous'", "== 'bulbous'", "== 'bulbous'", "== 'bulbous'", "== 'bulbous'", "== 'swollen'"),
                               criteria2 = c("has.ring", "season", "stem.height", "stem.width", "stem.width", "stem.width", "has.ring", "does.bruise.or.bleed", "does.bruise.or.bleed", "veil.type", "has.ring", "season", "gill.spacing", "stem.height", "stem.width", "stem.width"),
-                              value2 = c("== TRUE", "== 'spring'", "> 16", "> 40", "> 29", "> 47", "== FALSE", "== TRUE", "== TRUE", "== 'universal'", "== TRUE", "== 'spring'", "== ''", "> 8", "> 20", "> 18")
+                              value2 = c("== TRUE", "== 'spring'", "> 16", "> 40", "> 29", "> 48", "== FALSE", "== TRUE", "== TRUE", "== 'universal'", "== TRUE", "== 'spring'", "== ''", "> 8", "> 20", "> 23")
                               )
 
+# Concatenate list items as one criteria string
 mono_criteria_list <- paste(single_criteria$criteria, single_criteria$value, collapse = " | ")
 double_criteria_list <- paste("(", double_criteria$criteria1, double_criteria$value1, "&", double_criteria$criteria2, double_criteria$value2, ")",collapse = " | ")
-bi_criteria_list <- paste(single_criteria_list, "|", double_criteria_list)
+bi_criteria_list <- paste(mono_criteria_list, "|", double_criteria_list)
 
+# Create a prediction dataset, with boolean factors (meaning "is.edible")
 predictions <- validation_set
-predictions$edible <- as.logical(as.character(recode_factor(predictions$class, edible = TRUE, poisonous = FALSE))) # Switch to logical values
+predictions$reference <- as.logical(as.character(recode_factor(predictions$class, edible = TRUE, poisonous = FALSE))) # Switch to logical values
+
+# Apply the three predictive models
 predictions$stupid_predict = FALSE   # Consider all mushrooms as poisonous
 predictions <- predictions %>% mutate(mono_predict = eval(parse(text = mono_criteria_list)))
 predictions <- predictions %>% mutate(bi_predict = eval(parse(text = bi_criteria_list)))
 
-# predictions <- predictions %>%
-#    mutate(bi_predict = (gill.spacing == "distant" & (has.ring == TRUE | season == "spring") |
-#                         gill.spacing == "close" & stem.height > 16 |
-#                         gill.spacing == "none" & stem.width > 40 |
-#                         season == "spring" & stem.width > 29 |
-#                         season == "summer" & stem.width > 47 |
-#                         veil.type == "universal" & (has.ring == FALSE | does.bruise.or.bleed == TRUE) |
-#                         stem.height > 9 & stem.width > 40 |
-#                         stem.height > 15 & stem.width > 30 |
-#                         stem.root == "bulbous" & (does.bruise.or.bleed == TRUE | veil.type == "universal" | has.ring == TRUE | season == "spring" | gill.spacing == "" | stem.height > 8 | stem.width > 20) |
-#                         stem.root == "swollen" & (stem.width > 18) #|
-#                         # cap.shape == "sunken" & stem.root %in% c("bulbous", "swollen") |
-#                         # cap.shape == "conical" & (stem.height > 10 | veil.type == "universal" | gill.spacing == "none") |
-#                         # cap.shape == "flat" & season == "spring" |
-#                         # cap.shape == "bell" & gill.spacing == "distant" |
-#                         # cap.shape == "other" & (stem.height > 8 | stem.width > 39) |
-#                         # cap.shape == "spherical" & (stem.root == "swollen" | does.bruise.or.bleed == TRUE | stem.width > 38 | cap.diameter > 17 | gill.spacing == "none") |
-#                         # veil.color == "white" & (stem.width > 21 | does.bruise.or.bleed == TRUE | stem.root == "bulbous" | cap.shape == "conical")
-#                         )
-#           )
+# Convert logical to factors (confusionMatrix works with factors)
+predictions$reference <- as.factor(predictions$reference)
+predictions$stupid_predict <- factor(predictions$stupid_predict, levels = c("FALSE","TRUE")) # Create level TRUE (not present) for confusionMatrix use (reference & prediction must have the same levels)
+predictions$mono_predict <- as.factor(predictions$mono_predict)
+predictions$bi_predict <- as.factor(predictions$bi_predict)
 
-mean(predictions$edible == predictions$stupid_predict)   # Accuracy of the "all poisonous" model
-mean(predictions$edible == predictions$mono_predict)     # Accuracy of the single criterion model
-mean(predictions$edible == predictions$bi_predict)     # Accuracy of the double criterion model
-
+# Confusion matrices
+CM_stupid <- confusionMatrix(data = predictions$stupid_predict, reference = predictions$reference)
+CM_monocrit <- confusionMatrix(data = predictions$mono_predict, reference = predictions$reference)
+CM_bicrit <- confusionMatrix(data = predictions$bi_predict, reference = predictions$reference)
 
 #https://topepo.github.io/caret/available-models.html
 fit_test <- function(fit_model){
@@ -271,27 +263,27 @@ save.image(file = "EKR-mushrooms.RData")
 load("EKR-mushrooms.RData")
 
 ####################################################################
-# Choix modèles avec le plus de dissimilarités
-#https://topepo.github.io/caret/models-clustered-by-tag-similarity.html
-
-# Download caret models tags list, import
-model_tags <- tempfile()
-download.file("https://topepo.github.io/caret/tag_data.csv", model_tags)
-model_tags <- read.csv(model_tags, row.names = 1)
-model_tags <- as.matrix(model_tags)
-
-# Select regression models
-regression_models <- tag[tag[,"Regression"] == 1,]
-
-all <- 1:nrow(regression_models)
-## Seed the analysis with the SVM model
-start <- grep("(svmRadial)", rownames(regression_models), fixed = TRUE)
-pool <- all[all != start]
-
-## Select 4 model models by maximizing the Jaccard dissimilarity between sets of models
-nextMods <- maxDissim(regression_models[start,,drop = FALSE], 
-                      regression_models[pool, ], 
-                      method = "Jaccard",
-                      n = 4)
-
-rownames(regression_models)[c(start, nextMods)]
+# # Choix modèles avec le plus de dissimilarités
+# #https://topepo.github.io/caret/models-clustered-by-tag-similarity.html
+# 
+# # Download caret models tags list, import
+# model_tags <- tempfile()
+# download.file("https://topepo.github.io/caret/tag_data.csv", model_tags)
+# model_tags <- read.csv(model_tags, row.names = 1)
+# model_tags <- as.matrix(model_tags)
+# 
+# # Select regression models
+# regression_models <- tag[tag[,"Regression"] == 1,]
+# 
+# all <- 1:nrow(regression_models)
+# ## Seed the analysis with the SVM model
+# start <- grep("(svmRadial)", rownames(regression_models), fixed = TRUE)
+# pool <- all[all != start]
+# 
+# ## Select 4 model models by maximizing the Jaccard dissimilarity between sets of models
+# nextMods <- maxDissim(regression_models[start,,drop = FALSE],
+#                       regression_models[pool, ],
+#                       method = "Jaccard",
+#                       n = 4)
+# 
+# rownames(regression_models)[c(start, nextMods)]
