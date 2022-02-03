@@ -11,7 +11,7 @@ library(tidyverse)      # Set of packages used in everyday data analyses
 library(caret)      # Set of packages for machine learning
 library(DataExplorer)   # For exploratory analysis
 library(RColorBrewer)     # ggplot2 palettes
-library(GGally)      # Correlation plots
+library(GGally)      # Correlation plots (pairs)
 
 # Get, decompress, import data file
 datafile <- tempfile()
@@ -173,7 +173,7 @@ for (n in 2:l){    # Column 1 (class) isn't plotted since it's the color attribu
 }
 
 # Graphiques corrélations avec ggpairs.
-ggpairs(
+pair_plots <- ggpairs(
    training_set,
    columns = c(2,6,7,10,11),
    lower = NULL,

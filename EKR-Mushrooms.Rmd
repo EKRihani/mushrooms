@@ -95,8 +95,15 @@ Do not, **under any circumstances**, use this kind of dataset to determine if a 
 
 \subsection{Goal of the study}
 \paragraph*{}
-Mushroom and plants identification is a
-
+Mushroom and plants identification is a classic classification problem, which is usually performed manually, using identification tables. Most of these identification tables are actually based on a tree-based process, which seems pretty logical, given the tree-based logic of evolutionary processes. However, this logic has several limits.
+\paragraph*{}
+The first limit is the number of missing links. Some species have obviously become extinct, which means some of the branches and nodes of the phylogenetic tree are missing, which can complicate the analysis when two related species have a lot of missing common branches and nodes. Some similarities between species can also be missed.
+\paragraph*{}
+The second, and deeper limit is the inherent logic of the evolutionary process. Two antagonist phenomenons are at stake : evolutionary divergence and convergence. Both phenomenons are lined to the necessary adaptation of species to their environment. The evolutionary divergence explains the diversity of mammals : bats, whales and horses look very different because they have adapted to very different environments. The evolutionary convergence explains the similarity between the wing of a bat and the wing of the bee. However, despite their apparent dissimilarity, the wing of the bat is closer to the human hand than it is from the wing of the bee. The most reliable way to assess the evolutionary process and accurately find links between species is to analyze their genomes : visible characteristics can sometimes be very misleading. However, these characteristics often are the only ones available.
+\paragraph*{}
+The third problem is the primary endpoint of the classification. This endpoint may or may not be linked to the evolutionary process or the visible criteria, especially if this endpoint is vague. Our "not edible" endpoint lies in this category, for several reasons : it is mostly centered on human-only toxicity, many very different toxicity mechanisms can exist and the toxicity or non-toxicity of a fungic or vegetal metabolite can be linked to very tenuous modifications from one specie to another.
+\paragraph*{}
+For these reasons among others, the tree-based logic, while commonly used in mushrooms and plants identification, and allegedly justified by the tree-based evolutionary process, may not necessarily be the most optimal approach to species classification based on visual criteria. The aim of this study is to perform this classification task based on limited visual cues, and to assess the performance of several classification strategies.
 \subsection{The dataset}
 \paragraph*{}
 The Secondary Mushroom Identification Dataset was submitted by Dennis Wagner in 2021[@mushroom2][@mushroom2b], and is inspired by the Mushroom Dataset created by Jeff Schlimmer in 1987[@mushroom1][@mushroom1b]. Both datasets aim to create a fictional collection of mushrooms, built by gathering characteristics about a selected number of mushroom species, then randomizing each individual mushroom quantitative variables along the species typical characteristics (i.e. cap diameter, stem  height, stem width).  
@@ -202,8 +209,25 @@ The stem height distribution also looks like a bell curve with a long right tail
 \paragraph*{}
 The stem width distribution looks like a bell curve with a long right tail, and a peak around 12 mm. In all three distributions, the right tail can probably be explained by the impossibility to have negative dimensional values.
 
+\subsection{Training, validation and evaluation sets}
 \paragraph*{}
-*Section that explains the process and techniques used, including data cleaning, data exploration and visualization, insights gained, and your modeling approach*
+
+
+\subsection{Training set analysis}
+\paragraph*{}
+Once the original dataset is split in training, validation and evaluation sets, one can have a look at the characteristics of the edible and toxic populations and draw conclusions without any risk of overfitting.
+```{r, echo = FALSE, fig.cap = "Mushroom characteristic on the training set"}
+plot(ggarrange(
+   ncol = 3,
+   train_distrib_cap.diameter + ggtitle("Cap Diameter"),
+   train_distrib_stem.height + ggtitle("Stem Height"),
+   train_distrib_stem.width + ggtitle("Stem Width")#,
+#   train_distrib_habitat + ggtitle("Habitat"),
+#   train_distrib_stem.color + ggtitle("Stem Color"),
+#   train_distrib_veil.color + ggtitle("Veil Color")
+   )
+)
+```  
 
 \newpage
 \section{Results}
