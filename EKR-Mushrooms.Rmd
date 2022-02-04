@@ -193,7 +193,7 @@ plot(ggarrange(
 All dimensional distributions seem to roughly follow a bell curbe, with a long tail towards the higher values.
 \paragraph*{}
 A logarithmic transformation can help us see the shape of this tail.  
-```{r, echo = FALSE, fig.cap = "Mushroom cap diameter, stem height and stem width distribution"}
+```{r, echo = FALSE, fig.cap = "Mushroom cap diameter, stem height and stem width distribution (log Y scale)"}
 plot(ggarrange(
    ncol = 3,
    study_distrib_cap.diameter + ggtitle("") + ylab("") + scale_y_log10(labels = NULL),
@@ -215,20 +215,30 @@ The stem width distribution looks like a bell curve with a long right tail, and 
 
 \subsection{Training set analysis}
 \paragraph*{}
-Once the original dataset is split in training, validation and evaluation sets, one can have a look at the characteristics of the edible and toxic populations and draw conclusions without any risk of overfitting.
-```{r, echo = FALSE, fig.cap = "Mushroom characteristic on the training set"}
+Once the original dataset is split in training, validation and evaluation sets, one can have a look at the characteristics of the edible and toxic populations and draw conclusions without any risk of overfitting.  
+
+```{r, echo = FALSE, fig.cap = "Mushroom characteristics, training set (log y scale)"}
 plot(ggarrange(
-   ncol = 3,
-   train_distrib_cap.diameter + ggtitle("Cap Diameter"),
-   train_distrib_stem.height + ggtitle("Stem Height"),
-   train_distrib_stem.width + ggtitle("Stem Width")#,
-#   train_distrib_habitat + ggtitle("Habitat"),
-#   train_distrib_stem.color + ggtitle("Stem Color"),
-#   train_distrib_veil.color + ggtitle("Veil Color")
+   ncol = 3, widths = c(1,1,1.7),
+   train_distrib_cap.diameter + ggtitle("Cap Diameter") + ggtitle("") + ylab("") + scale_y_log10(labels = NULL) + theme(legend.position = "none"),
+   train_distrib_stem.height + ggtitle("Stem Height") + ggtitle("") + ylab("") + scale_y_log10(labels = NULL) + theme(legend.position = "none"),
+   train_distrib_stem.width + ggtitle("Stem Width") + ggtitle("") + ylab("") + scale_y_log10(labels = NULL)
    )
 )
 ```  
-
+```{r, echo = FALSE, fig.cap = "Mushroom characteristics, training set (log y scale)"}
+plot(ggarrange(
+   ncol = 3, widths = c(1,1,1.6),
+   train_distrib_habitat + ggtitle("Habitat") + ggtitle("") + ylab("") + scale_y_log10(labels = NULL) + theme(legend.position = "none", axis.text.x = element_text(angle = 60, vjust = 1, hjust=1)),
+   train_distrib_stem.color + ggtitle("Stem Color") + ggtitle("") + ylab("") + scale_y_log10(labels = NULL) + theme(legend.position = "none", axis.text.x = element_text(angle = 60, vjust = 1, hjust=1)),
+   train_distrib_veil.color + ggtitle("Veil Color") + ggtitle("") + ylab("") + scale_y_log10(labels = NULL) + theme(axis.text.x = element_text(angle = 60, vjust = 1, hjust = 1))
+   )
+)
+```  
+\paragraph*{}
+Differences in the distribution of edible and non edible species can already be seen, and these variations may be used to classify species.
+\paragraph*{}
+Our classification strategy is based on one rule : the specificity on the edibility criterion must be equal to 1. In other words, non-edible mushroom should never be classified as edible.
 \newpage
 \section{Results}
 
