@@ -229,16 +229,28 @@ plot(ggarrange(
 ```{r, echo = FALSE, fig.cap = "Mushroom characteristics, training set (log y scale)"}
 plot(ggarrange(
    ncol = 3, widths = c(1,1,1.6),
-   train_distrib_habitat + ggtitle("Habitat") + ggtitle("") + ylab("") + scale_y_log10(labels = NULL) + theme(legend.position = "none", axis.text.x = element_text(angle = 60, vjust = 1, hjust=1)),
-   train_distrib_stem.color + ggtitle("Stem Color") + ggtitle("") + ylab("") + scale_y_log10(labels = NULL) + theme(legend.position = "none", axis.text.x = element_text(angle = 60, vjust = 1, hjust=1)),
-   train_distrib_veil.color + ggtitle("Veil Color") + ggtitle("") + ylab("") + scale_y_log10(labels = NULL) + theme(axis.text.x = element_text(angle = 60, vjust = 1, hjust = 1))
+   train_distrib_habitat + ggtitle("Habitat") + ggtitle("") + ylab("") + scale_y_log10(labels = NULL) + theme(legend.position = "none", axis.text.x = element_text(angle = 70, vjust = 1, hjust=1)),
+   train_distrib_spore.print.color + ggtitle("Spore Print Color") + ggtitle("") + ylab("") + scale_y_log10(labels = NULL) + theme(legend.position = "none", axis.text.x = element_text(angle = 70, vjust = 1, hjust=1)),
+   train_distrib_veil.color + ggtitle("Veil Color") + ggtitle("") + ylab("") + scale_y_log10(labels = NULL) + theme(axis.text.x = element_text(angle = 70, vjust = 1, hjust = 1))
    )
 )
 ```  
 \paragraph*{}
 Differences in the distribution of edible and non edible species can already be seen, and these variations may be used to classify species.
 \paragraph*{}
-Our classification strategy is based on one rule : the specificity on the edibility criterion must be equal to 1. In other words, non-edible mushroom should never be classified as edible.
+Our classification strategy is based on one rule : the specificity on the edibility criterion must be equal to 1, false negative are not tolerated. In layman's terms, a good algorithm should never classify a poisonous mushroom as edible.
+\paragraph*{}
+Given this constraint, a "stupid" algorithm can be designed as a benchmark. This algorithm will simply classify all mushrooms as poisonous.
+\paragraph*{}
+A slightly more elaborate algorithm will classify mushrooms as edible if they meet one criterion. For example, in the distributions showed above, the mushroom will be edible if *cap.diameter* > 40, if *spore.print.color* = gray or if *veil.color* = yellow.
+
+```{r out.width = "90%", echo = FALSE}
+
+kable(CM_stupid["table"], caption = "Confusion Matrix for stupid classifier")
+```
+
+
+
 \newpage
 \section{Results}
 

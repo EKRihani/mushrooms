@@ -39,7 +39,7 @@ uniques_missing_f <- unique(data_missing_f)
 # Change dataset factors into intelligible words
 dataset$class <- recode_factor(dataset$class, e = "edible", p = "poisonous")
 dataset$cap.shape <- recode_factor(dataset$cap.shape, b = "bell", c = "conical", x = "convex", f = "flat", s = "sunken", p = "spherical", o = "other")
-dataset$cap.surface <- recode_factor(dataset$cap.surface, i = "fibrous", g = "grooves", y = "scaly", s = "smooth", h = "shiny", l = "leathery", k = "silky", t = "sticky", w = "wrinkled", e = "fleshy")
+dataset$cap.surface <- recode_factor(dataset$cap.surface, i = "fibrous", g = "grooves", y = "scaly", s = "smooth", h = "shiny", l = "leathery", k = "silky", t = "sticky", w = "wrinkled", e = "fleshy", d = "downy")
 dataset$cap.color <- recode_factor(dataset$cap.color, n = "brown", b = "buff", g = "gray", r = "green", p = "pink", u = "purple", e = "red", w = "white", y = "yellow", l = "blue", o = "orange", k = "black")
 dataset$gill.attachment <- recode_factor(dataset$gill.attachment, a = "adnate", x = "adnexed", d = "decurrent", e = "free", s = "sinuate", p = "pores", f = "none", "?" = "unknown")
 dataset$gill.spacing <- recode_factor(dataset$gill.spacing, c = "close", d = "distant", f = "none")
@@ -188,6 +188,8 @@ pair_plots <- ggpairs(
    )
 
 # Create criteria lists for single and dual variable classification
+training_set %>% filter(class == "poisonous") %>% summarize (CD = max(cap.diameter), SH = max(stem.height), SW = max(stem.width))
+
 single_criteria <- data.frame(criteria = c("cap.diameter", "habitat", "habitat", "ring.type", "spore.print.color", "stem.color", "stem.height", "stem.width", "veil.color"),
                               value = c("> 35", "== 'urban'", "== 'waste'", "== 'movable'", "== 'gray'", "== 'buff'", "> 21", "> 60", "== 'yellow'")
                               )
@@ -219,9 +221,12 @@ predictions$mono_predict <- as.factor(predictions$mono_predict)
 predictions$bi_predict <- as.factor(predictions$bi_predict)
 
 # Confusion matrices
-CM_stupid <- confusionMatrix(data = predictions$stupid_predict, reference = predictions$reference)
-CM_monocrit <- confusionMatrix(data = predictions$mono_predict, reference = predictions$reference)
-CM_bicrit <- confusionMatrix(data = predictions$bi_predict, reference = predictions$reference)
+CM_stupid <- confusionMatrix(data = predictions$stupid_predict, reference = predictions$reference, positive = "TRUE")
+CM_monocrit <- confusionMatrix(data = predictions$mono_predict, reference = predictions$reference, positive = "TRUE")
+CM_bicrit <- confusionMatrix(data = predictions$bi_predict, reference = predictions$reference, positive = "TRUE")
+
+CM_monocrit["byClass"]
+CM_monocrit["table"]
 
 #https://topepo.github.io/caret/available-models.html
 fit_test <- function(fit_model){
