@@ -190,13 +190,31 @@ pair_plots <- ggpairs(
 # Create criteria lists for single and dual variable classification
 training_set %>% filter(class == "poisonous") %>% summarize (CD = max(cap.diameter), SH = max(stem.height), SW = max(stem.width))
 
-factors_list <- training_set %>% select_if(is.factor) %>% gather(factor, levels) %>% unique() %>% select(factor, levels)
+factors_list <- training_set %>% select_if(is.factor) %>% gather(factor, level) %>% unique() %>% select(factor, level) %>% filter(factor != "class")
 
-factors_type <- training_set %>% summary.default %>% as.data.frame %>% group_by(Var1) %>% spread(Var2, Freq) %>%  select(-Length)
-factors_type$Class <- ifelse(factors_type$Class == "-none-", factors_type$Mode, factors_type$Class)
-factors_type <- factors_type %>% select(-Mode)
+factors_type <- training_set %>% summary.default %>% as.data.frame %>% group_by(Var1) %>% spread(Var2, Freq) %>% as.data.frame   # Get training_set structure
+factors_type$Class <- if_else(factors_type$Class == "-none-", factors_type$Mode, factors_type$Class)     # Create coherent Class column
+factors_type <- factors_type %>% select(-Mode, -Length)    # Clean factors_type
+colnames(factors_type) <- c("factor", "type")
 
+add_factorsL <- factors_type %>% filter(type == "logical") %>% slice(rep(1:n(), each = 2)) %>% mutate(level = rep(c("TRUE", "FALSE"), times = n()/2)) # Create TRUE/FALSE for each logical factor
+add_factorsN <- factors_type %>% filter(type == "numeric") %>% slice(rep(1:n(), each = 2)) %>% mutate(level = rep(c("min", "max"), times = n()/2))      # Create rows for numeric factors
 
+factors_list <- left_join(factors_list, factors_type)
+factors_list <- rbind(factors_list, add_factorsL, add_factorsN)
+factors_list$all_edible <- FALSE       # Set as poisonous by default
+
+l <- nrow(factors_list)
+
+for (n in 1:l){
+#   if(factors_list$Class[n] %in% c("logical", "factor")
+#      {
+         factors_list$all_edible[n] <-training_set %>% filter(class == "poisonous", get(factors_list$factor[n]) == factors_list$level[n]) %>% nrow() == 0  # Find if (for this factor/level combination) there are ONLY edible species
+#   }
+#   else{}
+}
+
+relevant_factors <- factors_list %>% filter(all_edible == TRUE) %>% select(factor, level)
 
 single_criteria <- data.frame(criteria = c("cap.diameter", "habitat", "habitat", "ring.type", "spore.print.color", "stem.color", "stem.height", "stem.width", "veil.color"),
                               value = c("> 35", "== 'urban'", "== 'waste'", "== 'movable'", "== 'gray'", "== 'buff'", "> 21", "> 60", "== 'yellow'")
