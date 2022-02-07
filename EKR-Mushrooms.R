@@ -154,23 +154,23 @@ dataset_reduced_names <-  rownames(structure_dataset_reduced)
 l <- length(dataset_reduced_names)
 
 #Plot all bivariate distributions of the training set (poisonous vs edible)
-for (n in 2:l){    # Column 1 (class) isn't plotted since it's the color attribute
-  for (m in 2:l){
-     plot <- training_set %>%
-        ggplot(aes_string(x = dataset_reduced_names[n], y = dataset_reduced_names[m], color = training_set$class)) + #aes_string allows use of string instead of variable name
-        labs(colour = "class", x = dataset_reduced_names[n], y =dataset_reduced_names[m]) +
-#        scale_color_brewer(palette = "Set1", direction = -1) +
-        theme_bw()
-      if(structure_dataset_reduced$Final[n] %in% c("integer", "numeric") & structure_dataset_reduced$Final[m] %in% c("integer", "numeric"))  # Histogram for 2x integer/numeric,
-         {plot <- plot + geom_point(alpha = .4, shape = 20, size =2)} # regular scatterplot if all variables are numeric/integer
-      else
-         {plot <- plot + geom_jitter(alpha = .4, shape = 20, size = 2)} # jitter if 1 or 2 variables are character/factors/logical
-      if(structure_dataset_reduced$Final[n] %in% c("factor", "logical", "character"))
-         {plot <- plot + scale_x_discrete(guide = guide_axis(angle = 90))} # rotate X axis labels if text
-      plotname <- paste0("train_distrib_",dataset_reduced_names[n],"_",dataset_reduced_names[m])   # Concatenate "train_distrib" with the column names
-      assign(plotname, plot)     # Assign the plot to the train_distrib_colname1_colname2 name
-   }
-}
+# for (n in 2:l){    # Column 1 (class) isn't plotted since it's the color attribute
+#   for (m in 2:l){
+#      plot <- training_set %>%
+#         ggplot(aes_string(x = dataset_reduced_names[n], y = dataset_reduced_names[m], color = training_set$class)) + #aes_string allows use of string instead of variable name
+#         labs(colour = "class", x = dataset_reduced_names[n], y =dataset_reduced_names[m]) +
+#         #scale_color_brewer(palette = "Set1", direction = -1) +
+#         theme_bw()
+#       if(structure_dataset_reduced$Final[n] %in% c("integer", "numeric") & structure_dataset_reduced$Final[m] %in% c("integer", "numeric"))  # Histogram for 2x integer/numeric,
+#          {plot <- plot + geom_point(alpha = .4, shape = 20, size =2)} # regular scatterplot if all variables are numeric/integer
+#       else
+#          {plot <- plot + geom_jitter(alpha = .4, shape = 20, size = 2)} # jitter if 1 or 2 variables are character/factors/logical
+#       if(structure_dataset_reduced$Final[n] %in% c("factor", "logical", "character"))
+#          {plot <- plot + scale_x_discrete(guide = guide_axis(angle = 90))} # rotate X axis labels if text
+#       plotname <- paste0("train_distrib_",dataset_reduced_names[n],"_",dataset_reduced_names[m])   # Concatenate "train_distrib" with the column names
+#       assign(plotname, plot)     # Assign the plot to the train_distrib_colname1_colname2 name
+#    }
+# }
 
 # Graphiques corrélations avec ggpairs.
 pair_plots <- ggpairs(
@@ -188,7 +188,6 @@ pair_plots <- ggpairs(
    )
 
 # Create criteria lists for single and dual variable classification
-training_set %>% filter(class == "poisonous") %>% summarize (CD = max(cap.diameter), SH = max(stem.height), SW = max(stem.width))
 
 factors_list <- training_set %>% select_if(is.factor) %>% gather(factor, level) %>% unique() %>% select(factor, level) %>% filter(factor != "class")
 
@@ -207,17 +206,36 @@ factors_list$all_edible <- FALSE       # Set as poisonous by default
 l <- nrow(factors_list)
 
 for (n in 1:l){
-#   if(factors_list$Class[n] %in% c("logical", "factor")
-#      {
-         factors_list$all_edible[n] <-training_set %>% filter(class == "poisonous", get(factors_list$factor[n]) == factors_list$level[n]) %>% nrow() == 0  # Find if (for this factor/level combination) there are ONLY edible species
-#   }
-#   else{}
+    if(factors_list$type[n] %in% c("logical", "factor", "character"))
+       {
+          factors_list$all_edible[n] <-training_set %>% 
+             filter(class == "poisonous", get(factors_list$factor[n]) == factors_list$level[n]) %>%  
+             nrow() == 0 %>% # Find if (for this factor/level combination) there are no poisonous, i.e. ONLY edible species
+             as.character
+       }
+    else
+       {
+         minmax <- match.fun(factors_list$level[n])   # Set function as min or max
+         current_val <-training_set %>% 
+            filter(class == "poisonous") %>% 
+            select(factors_list$factor[n]) %>% 
+            minmax %>%
+            as.character
+         extremum <- training_set %>% 
+            select(factors_list$factor[n]) %>% 
+            minmax
+         factors_list$all_edible[n] <- current_val != extremum
+            current_val <- paste0(factors_list$level[n], current_val)
+            current_val <- str_replace_all(current_val, "min", "< ")
+            current_val <- str_replace_all(current_val, "max", "> ")
+           factors_list$level[n] <- current_val
+       }
 }
 
 relevant_factors <- factors_list %>% filter(all_edible == TRUE) %>% select(factor, level)
 
 single_criteria <- data.frame(criteria = c("cap.diameter", "habitat", "habitat", "ring.type", "spore.print.color", "stem.color", "stem.height", "stem.width", "veil.color"),
-                              value = c("> 35", "== 'urban'", "== 'waste'", "== 'movable'", "== 'gray'", "== 'buff'", "> 21", "> 60", "== 'yellow'")
+                              value = c("> 31", "== 'urban'", "== 'waste'", "== 'movable'", "== 'gray'", "== 'buff'", "> 21", "> 60", "== 'yellow'")
                               )
 
 double_criteria <- data.frame(criteria1 = c("gill.spacing", "gill.spacing", "gill.spacing", "gill.spacing", "season", "season", "veil.type", "veil.type", "stem.root", "stem.root", "stem.root", "stem.root", "stem.root", "stem.root", "stem.root", "stem.root"),
