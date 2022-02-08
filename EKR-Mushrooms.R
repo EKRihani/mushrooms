@@ -187,7 +187,12 @@ pair_plots <- ggpairs(
    ggplot2::aes(color = class)
    )
 
-# Create criteria lists for single and dual variable classification
+#######################################
+#     SIMPLE CLASSIFICATION MODEL     #
+#######################################
+
+
+# Create criteria lists for single variable classification
 
 factors_list <- training_set %>% select_if(is.factor) %>% gather(factor, level) %>% unique() %>% select(factor, level) %>% filter(factor != "class")
 
@@ -203,8 +208,8 @@ factors_list <- left_join(factors_list, factors_type)
 factors_list <- rbind(factors_list, add_factorsL, add_factorsN)
 factors_list$all_edible <- FALSE       # Set as poisonous by default
 
+# Find all "edible-only" criteria
 l <- nrow(factors_list)
-
 for (n in 1:l){
     if(factors_list$type[n] %in% c("logical", "factor", "character"))
        {
@@ -215,16 +220,22 @@ for (n in 1:l){
        }
     else
        {
-         minmax <- match.fun(factors_list$level[n])   # Set function as min or max
+         minmax <- factors_list$level[n]        # Set minmax to min or max
+         rounding <- str_replace_all(minmax, "min", "floor")
+         rounding <- str_replace_all(minmax, "max", "ceiling")
+         minmax <- match.fun(minmax)
+         rounding <- match.fun(rounding)
+                  #minmax <- match.fun(factors_list$level[n])   # Set string as function
          current_val <-training_set %>% 
             filter(class == "poisonous") %>% 
             select(factors_list$factor[n]) %>% 
-            minmax %>%
-            as.character
+            minmax #%>%
+            #as.character
          extremum <- training_set %>% 
             select(factors_list$factor[n]) %>% 
             minmax
          factors_list$all_edible[n] <- current_val != extremum
+            current_val <- rounding(current_val)
             current_val <- paste0(factors_list$level[n], current_val)
             current_val <- str_replace_all(current_val, "min", "< ")
             current_val <- str_replace_all(current_val, "max", "> ")
@@ -232,11 +243,19 @@ for (n in 1:l){
        }
 }
 
-relevant_factors <- factors_list %>% filter(all_edible == TRUE) %>% select(factor, level)
+relevant_factors <- factors_list %>% filter(all_edible == TRUE) %>% select(factor, level, type)
 
-single_criteria <- data.frame(criteria = c("cap.diameter", "habitat", "habitat", "ring.type", "spore.print.color", "stem.color", "stem.height", "stem.width", "veil.color"),
-                              value = c("> 31", "== 'urban'", "== 'waste'", "== 'movable'", "== 'gray'", "== 'buff'", "> 21", "> 60", "== 'yellow'")
-                              )
+str_factors <- relevant_factors %>% filter(type %in% c("factor", "logical", "character")) %>% mutate(level = str_c("== '", level, "'"))
+single_criteria <- relevant_factors %>% filter (type %in% c("numeric", "integer")) %>% rbind(str_factors, .)
+
+#single_criteria <- data.frame(criteria = c("cap.diameter", "habitat", "habitat", "ring.type", "spore.print.color", "stem.color", "stem.height", "stem.width", "veil.color"),
+#                              value = c("> 31", "== 'urban'", "== 'waste'", "== 'movable'", "== 'gray'", "== 'buff'", "> 21", "> 60", "== 'yellow'")
+#                              )
+
+
+
+
+
 
 double_criteria <- data.frame(criteria1 = c("gill.spacing", "gill.spacing", "gill.spacing", "gill.spacing", "season", "season", "veil.type", "veil.type", "stem.root", "stem.root", "stem.root", "stem.root", "stem.root", "stem.root", "stem.root", "stem.root"),
                               value1 = c("== 'distant'", "== 'distant'", "== 'close'", "== 'none'", "== 'spring'", "== 'summer'", "== 'universal'", "== 'universal'", "== 'bulbous'", "== 'bulbous'", "== 'bulbous'", "== 'bulbous'", "== 'bulbous'", "== 'bulbous'", "== 'bulbous'", "== 'swollen'"),
@@ -245,7 +264,7 @@ double_criteria <- data.frame(criteria1 = c("gill.spacing", "gill.spacing", "gil
                               )
 
 # Concatenate list items as one criteria string
-mono_criteria_list <- paste(single_criteria$criteria, single_criteria$value, collapse = " | ")
+mono_criteria_list <- paste(single_criteria$factor, single_criteria$level, collapse = " | ")
 double_criteria_list <- paste("(", double_criteria$criteria1, double_criteria$value1, "&", double_criteria$criteria2, double_criteria$value2, ")",collapse = " | ")
 bi_criteria_list <- paste(mono_criteria_list, "|", double_criteria_list)
 
