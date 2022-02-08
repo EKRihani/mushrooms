@@ -206,44 +206,50 @@ add_factorsN <- factors_type %>% filter(type == "numeric") %>% slice(rep(1:n(), 
 
 factors_list <- left_join(factors_list, factors_type)
 factors_list <- rbind(factors_list, add_factorsL, add_factorsN)
-factors_list$all_edible <- FALSE       # Set as poisonous by default
+
+# Build factor lists for 1 variable analysis
+factors_list1 <- factors_list
+factors_list1$all_edible <- FALSE       # Set as poisonous by default
+
+# Build factor lists for 2 variables analysis
+n <- nrow(factors_list)
+index_list2 <- t(combn(n, 2))          # Create all combinations of 2 factors
+half1_list2 <- factors_list[index_list2[,1],]
+colnames(half1_list2) <- c("factor1", "level1", "type1")
+half2_list2 <- factors_list[index_list2[,2],]
+colnames(half2_list2) <- c("factor2", "level2", "type2")
+factors_list2 <- cbind(half1_list2, half2_list2)
+factors_list2$all_edible <- FALSE
 
 # Find all "edible-only" criteria
-l <- nrow(factors_list)
+l <- nrow(factors_list1)
 for (n in 1:l){
-    if(factors_list$type[n] %in% c("logical", "factor", "character"))
+    if(factors_list1$type[n] %in% c("logical", "factor", "character"))
        {
-          factors_list$all_edible[n] <-training_set %>% 
-             filter(class == "poisonous", get(factors_list$factor[n]) == factors_list$level[n]) %>%  
-             nrow() == 0 %>% # Find if (for this factor/level combination) there are no poisonous, i.e. ONLY edible species
-             as.character
+          factors_list1$all_edible[n] <-training_set %>% 
+             filter(class == "poisonous", get(factors_list1$factor[n]) == factors_list1$level[n]) %>% 
+             nrow() == 0 #%>% as.character # Find if (for this factor/level combination) there are no poisonous, i.e. ONLY edible species
        }
     else
        {
-         minmax <- factors_list$level[n]        # Set minmax to min or max
+         minmax <- factors_list1$level[n]        # Set minmax to min or max
          rounding <- str_replace_all(minmax, "min", "floor")
          rounding <- str_replace_all(minmax, "max", "ceiling")
          minmax <- match.fun(minmax)
          rounding <- match.fun(rounding)
                   #minmax <- match.fun(factors_list$level[n])   # Set string as function
-         current_val <-training_set %>% 
-            filter(class == "poisonous") %>% 
-            select(factors_list$factor[n]) %>% 
-            minmax #%>%
-            #as.character
-         extremum <- training_set %>% 
-            select(factors_list$factor[n]) %>% 
-            minmax
-         factors_list$all_edible[n] <- current_val != extremum
+         current_val <-training_set %>% filter(class == "poisonous") %>% select(factors_list1$factor[n]) %>% minmax #%>% #as.character
+         extremum <- training_set %>%  select(factors_list1$factor[n]) %>% minmax
+         factors_list1$all_edible[n] <- current_val != extremum
             current_val <- rounding(current_val)
             current_val <- paste0(factors_list$level[n], current_val)
             current_val <- str_replace_all(current_val, "min", "< ")
             current_val <- str_replace_all(current_val, "max", "> ")
-           factors_list$level[n] <- current_val
+           factors_list1$level[n] <- current_val
        }
 }
 
-relevant_factors <- factors_list %>% filter(all_edible == TRUE) %>% select(factor, level, type)
+relevant_factors <- factors_list1 %>% filter(all_edible == TRUE) %>% select(factor, level, type)
 
 str_factors <- relevant_factors %>% filter(type %in% c("factor", "logical", "character")) %>% mutate(level = str_c("== '", level, "'"))
 single_criteria <- relevant_factors %>% filter (type %in% c("numeric", "integer")) %>% rbind(str_factors, .)
@@ -251,11 +257,6 @@ single_criteria <- relevant_factors %>% filter (type %in% c("numeric", "integer"
 #single_criteria <- data.frame(criteria = c("cap.diameter", "habitat", "habitat", "ring.type", "spore.print.color", "stem.color", "stem.height", "stem.width", "veil.color"),
 #                              value = c("> 31", "== 'urban'", "== 'waste'", "== 'movable'", "== 'gray'", "== 'buff'", "> 21", "> 60", "== 'yellow'")
 #                              )
-
-
-
-
-
 
 double_criteria <- data.frame(criteria1 = c("gill.spacing", "gill.spacing", "gill.spacing", "gill.spacing", "season", "season", "veil.type", "veil.type", "stem.root", "stem.root", "stem.root", "stem.root", "stem.root", "stem.root", "stem.root", "stem.root"),
                               value1 = c("== 'distant'", "== 'distant'", "== 'close'", "== 'none'", "== 'spring'", "== 'summer'", "== 'universal'", "== 'universal'", "== 'bulbous'", "== 'bulbous'", "== 'bulbous'", "== 'bulbous'", "== 'bulbous'", "== 'bulbous'", "== 'bulbous'", "== 'swollen'"),
