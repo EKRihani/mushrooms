@@ -146,6 +146,7 @@ for (n in 2:l){    # Column 1 (class) isn't plotted since it's the fill attribut
    {plot <- plot + geom_bar()}
    plotname <- paste0("train_distrib_",dataset_names[n])   # Concatenate "train_distrib" with the column name
    assign(plotname, plot)     # Assign the plot to the train_distrib_colname name
+   rm(plot)    # Clear memory
 }
 
 # For bivariate analysis : reduced dataset factor names list (<= 6 levels or numeric)
@@ -219,7 +220,13 @@ colnames(half1_list2) <- c("factor1", "level1", "type1")
 half2_list2 <- factors_list[index_list2[,2],]
 colnames(half2_list2) <- c("factor2", "level2", "type2")
 factors_list2 <- cbind(half1_list2, half2_list2)
-factors_list2$all_edible <- FALSE
+factors_list2 <- factors_list2 %>% filter(factor1 != factor2)
+
+factors_list2$all_edible <- FALSE      # Set as poisonous by default
+rm(half1_list2, half2_list2, index_list2)    # Clear memory
+
+#Check factors_list2 structure : in theory, by construction, there should be NO text factor2 + numeric factor1
+factors_check <- factors_list2 %>% filter(type2  %in% c("logical", "factor", "character"), type1 %in% c("integer", "numeric")) %>% nrow
 
 # Find all "edible-only" criteria
 l <- nrow(factors_list1)
@@ -230,14 +237,13 @@ for (n in 1:l){
              filter(class == "poisonous", get(factors_list1$factor[n]) == factors_list1$level[n]) %>% 
              nrow() == 0 #%>% as.character # Find if (for this factor/level combination) there are no poisonous, i.e. ONLY edible species
        }
-    else
+    else          # Type = integer or numeric
        {
          minmax <- factors_list1$level[n]        # Set minmax to min or max
-         rounding <- str_replace_all(minmax, "min", "floor")
-         rounding <- str_replace_all(minmax, "max", "ceiling")
-         minmax <- match.fun(minmax)
-         rounding <- match.fun(rounding)
-                  #minmax <- match.fun(factors_list$level[n])   # Set string as function
+         rounding <- str_replace_all(minmax, "min", "floor")      # Set rounding by default for min value (floor)
+         rounding <- str_replace_all(minmax, "max", "ceiling")    # Set rounding : by excess for max value (ceiling)
+         minmax <- match.fun(minmax)      # Convert the min/max string to function
+         rounding <- match.fun(rounding)     # Convert the floor/ceiling string to function
          current_val <-training_set %>% filter(class == "poisonous") %>% select(factors_list1$factor[n]) %>% minmax #%>% #as.character
          extremum <- training_set %>%  select(factors_list1$factor[n]) %>% minmax
          factors_list1$all_edible[n] <- current_val != extremum
@@ -248,6 +254,34 @@ for (n in 1:l){
            factors_list1$level[n] <- current_val
        }
 }
+for (n in 1:l){
+   if(factors_list2$type1[n] %in% c("logical", "factor", "character") & factors_list2$type2[n] %in% c("logical", "factor", "character"))
+   {
+      factors_list2$count[n] <- training_set %>% 
+         filter(get(factors_list2$factor1[n]) == factors_list2$level1[n], get(factors_list2$factor2[n]) == factors_list2$level2[n]) %>% nrow
+      factors_list2$count_poison[n] <- training_set %>% 
+         filter(class == "poisonous", get(factors_list2$factor1[n]) == factors_list2$level1[n], get(factors_list2$factor2[n]) == factors_list2$level2[n]) %>% nrow
+      factors_list2$all_edible[n] <- factors_list2$count != 0 & factors_list2$count_poison == 0
+      nrow() == 0 #%>% as.character # Find if (for this factor/level combination) there are no poisonous, i.e. ONLY edible species
+   }
+   else          # Type = integer or numeric
+   {
+      minmax <- factors_list1$level[n]        # Set minmax to min or max
+      rounding <- str_replace_all(minmax, "min", "floor")      # Set rounding by default for min value (floor)
+      rounding <- str_replace_all(minmax, "max", "ceiling")    # Set rounding : by excess for max value (ceiling)
+      minmax <- match.fun(minmax)      # Convert the min/max string to function
+      rounding <- match.fun(rounding)     # Convert the floor/ceiling string to function
+      current_val <-training_set %>% filter(class == "poisonous") %>% select(factors_list1$factor[n]) %>% minmax #%>% #as.character
+      extremum <- training_set %>%  select(factors_list1$factor[n]) %>% minmax
+      factors_list1$all_edible[n] <- current_val != extremum
+      current_val <- rounding(current_val)
+      current_val <- paste0(factors_list$level[n], current_val)
+      current_val <- str_replace_all(current_val, "min", "< ")
+      current_val <- str_replace_all(current_val, "max", "> ")
+      factors_list1$level[n] <- current_val
+   }
+}
+
 
 relevant_factors <- factors_list1 %>% filter(all_edible == TRUE) %>% select(factor, level, type)
 
