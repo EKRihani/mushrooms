@@ -228,6 +228,25 @@ rm(half1_list2, half2_list2, index_list2)    # Clear memory
 #Check factors_list2 structure : in theory, by construction, there should be NO text factor2 + numeric factor1
 factors_check <- factors_list2 %>% filter(type2  %in% c("logical", "factor", "character"), type1 %in% c("integer", "numeric")) %>% nrow
 
+
+# Define function : min/max and rounding mode selection
+minmaxing <- function(input_level){
+   rounding <- str_replace_all(input_level, "min", "floor")      # Set rounding by default if "min" input (floor)
+   rounding <- str_replace_all(input_level, "max", "ceiling")    # Set rounding : by excess if "max" input (ceiling)
+   c(match.fun(input_level), match.fun(rounding))     # Set function vector with "min"/"max" string as function [[1]] and "floor"/"ceiling" string as function [[2]]
+   #c(input_level, rounding)
+}
+
+# Define function : rounding + min/max concatenation + sup/inf conversion
+supinf <- function(input_value){
+   input_value %>%
+      minmax[[2]](.) %>%         # Round to lower (if level = "min") or higher (if level = "max") value
+      paste0(factors_list$level[n], .) %>%      # Paste "min" or "max" before rounded value
+      str_replace_all(., "min", "< ") %>%      # Replace "min" by "< "
+      str_replace_all(., "max", "> ")      # Paste "max" by "> "
+}
+
+
 # Find all "edible-only" criteria
 l <- nrow(factors_list1)
 for (n in 1:l){
@@ -235,93 +254,76 @@ for (n in 1:l){
        {
           factors_list1$all_edible[n] <-training_set %>% 
              filter(class == "poisonous", get(factors_list1$factor[n]) == factors_list1$level[n]) %>% 
-             nrow() == 0 #%>% as.character # Find if (for this factor/level combination) there are no poisonous, i.e. ONLY edible species
+             nrow() == 0  # Find if (for this factor/level combination) there are no poisonous, i.e. ONLY edible species
        }
     else          # Type = integer or numeric
        {
-         minmax <- factors_list1$level[n]        # Set minmax to min or max
-         rounding <- str_replace_all(minmax, "min", "floor")      # Set rounding by default for min value (floor)
-         rounding <- str_replace_all(minmax, "max", "ceiling")    # Set rounding : by excess for max value (ceiling)
-         minmax <- match.fun(minmax)      # Convert the min/max string to function
-         rounding <- match.fun(rounding)     # Convert the floor/ceiling string to function
-         current_val <-training_set %>% filter(class == "poisonous") %>% select(factors_list1$factor[n]) %>% minmax #%>% #as.character
-         extremum <- training_set %>%  select(factors_list1$factor[n]) %>% minmax
+         minmax <- minmaxing(factors_list1$level[n])
+         current_val <- training_set %>% filter(class == "poisonous") %>% select(factors_list1$factor[n]) %>% minmax[[1]](.)
+         extremum <- training_set %>%  select(factors_list1$factor[n]) %>% minmax[[1]](.)
          factors_list1$all_edible[n] <- current_val != extremum
-            current_val <- rounding(current_val)
-            current_val <- paste0(factors_list$level[n], current_val)
-            current_val <- str_replace_all(current_val, "min", "< ")
-            current_val <- str_replace_all(current_val, "max", "> ")
-           factors_list1$level[n] <- current_val
+         factors_list1$level[n] <- supinf(current_val)
        }
 }
 
+
+
+# SAUVEGARDE/SWITCH factorslist POUR DEBUGAGE
+factors_list2b <- factors_list2
+
+
+factors_list2 <- factors_list2b
 l <- nrow(factors_list2)
-l <- 130
-for (n in 1:l){
-   if(factors_list2$type1[n] %in% c("logical", "factor", "character") & factors_list2$type2[n] %in% c("logical", "factor", "character")) # factor1-text + factor2-text
+
+for (n in 8002:8003){ # 1:l à remplacer : FactorFactor = 1:2 ; FactorLogical = 117:118 ; FactorNumeric = 122:123 ; NumericNumeric = 8000:8001
+   if(factors_list2$type1[n] %in% c("logical", "factor", "character") & factors_list2$type2[n] %in% c("logical", "factor", "character")) # factor1 & factor 2 are text
    {
-      count <- training_set %>% 
-         filter(get(factors_list2$factor1[n]) == factors_list2$level1[n], get(factors_list2$factor2[n]) == factors_list2$level2[n]) %>% nrow
-      count_poison <- training_set %>% 
-         filter(class == "poisonous", get(factors_list2$factor1[n]) == factors_list2$level1[n], get(factors_list2$factor2[n]) == factors_list2$level2[n]) %>% nrow
+      count <- training_set %>%
+         filter(get(factors_list2$factor1[n]) == factors_list2$level1[n], get(factors_list2$factor2[n]) == factors_list2$level2[n]) %>%
+         nrow
+      count_poison <- training_set %>%
+         filter(class == "poisonous", get(factors_list2$factor1[n]) == factors_list2$level1[n], get(factors_list2$factor2[n]) == factors_list2$level2[n]) %>%
+         nrow
       factors_list2$all_edible[n] <- count != 0 & count_poison == 0 # Find if (for this factor/level combination) there are mushrooms AND no poisonous, i.e. ONLY edible species
+print(factors_list2$all_edible[n])
    }
-   else          # factor1-text & factor2-number
+   else          # factor1 is text & factor2 is number
    {if(factors_list2$type1[n] %in% c("logical", "factor", "character") & factors_list2$type2[n] %in% c("numeric", "integer"))
       {
-         #minmax <- factors_list2$level2[n]        # Set minmax to min or max            OKKK
-         minmax <- "min"
-         rounding <- str_replace_all(minmax, "min", "floor")      # Set rounding by default for min value (floor)        OKKKK
-         rounding <- str_replace_all(minmax, "max", "ceiling")    # Set rounding : by excess for max value (ceiling)      OKKKK
-         minmax <- match.fun(minmax)      # Convert the min/max string to function
-         rounding <- match.fun(rounding)     # Convert the floor/ceiling string to function
-         current_val <-training_set %>% filter(class == "poisonous", get(factors_list2$factor1[n]) == factors_list2$level1[n]) %>% select(factors_list2$factor2[n]) %>% minmax #%>% as.character    # OKKKKKKK
-         extremum <- training_set %>% filter(get(factors_list2$factor1[n]) == factors_list2$level1[n]) %>% select(factors_list2$factor2[n]) %>% minmax %>% as.character
+         minmax <- minmaxing(factors_list2$level2[n])
+         current_val <-training_set %>%
+            filter(class == "poisonous", get(factors_list2$factor1[n]) == factors_list2$level1[n]) %>%
+            select(factors_list2$factor2[n]) %>%
+            minmax[[1]](.) # %>% as.character
+         extremum <- training_set %>%
+            filter(get(factors_list2$factor1[n]) == factors_list2$level1[n]) %>%
+            select(factors_list2$factor2[n]) %>%
+            minmax[[1]](.) # %>% as.character
          factors_list2$all_edible[n] <- current_val != extremum
-         current_val <- rounding(current_val)
-         current_val <- paste0(factors_list2$level2[n], current_val)
-         current_val <- str_replace_all(current_val, "min", "< ")
-         current_val <- str_replace_all(current_val, "max", "> ")
-         factors_list2$level2[n] <- "lol" #current_val
-   }
-   else # factor1-number + factor2-number
-      minmax1 <- factors_list2$level1[n]        # Set minmax to min or max
-      # rounding1 <- str_replace_all(minmax1, "min", "floor")      # Set rounding by default for min value (floor)
-      # rounding1 <- str_replace_all(minmax1, "max", "ceiling")    # Set rounding : by excess for max value (ceiling)
-      minmax1 <- match.fun(minmax1)      # Convert the min/max string to function
-      # rounding1 <- match.fun(rounding1)     # Convert the floor/ceiling string to function
-      minmax2 <- factors_list2$level2[n]
-      # rounding2 <- str_replace_all(minmax2, "min", "floor")
-      # rounding2 <- str_replace_all(minmax2, "max", "ceiling")
-      minmax2 <- match.fun(minmax2)
-      # rounding2 <- match.fun(rounding2)
-      current_val1 <-training_set %>% filter(class == "poisonous") %>% select(factors_list2$factor1[n]) %>% minmax1 #%>% #as.character
-      extremum1 <- training_set %>%  select(factors_list2$factor1[n]) %>% minmax1
-      current_val2 <-training_set %>% filter(class == "poisonous") %>% select(factors_list2$factor2[n]) %>% minmax2 #%>% #as.character
-      extremum2 <- training_set %>%  select(factors_list2$factor2[n]) %>% minmax2
-      factors_list2$all_edible[n] <- current_val1 != extremum1 & current_val2 != extremum2
-      # current_val1 <- rounding(current_val1)
-      current_val1 <- paste0(factors_list2$level1[n], current_val1)
-      current_val1 <- str_replace_all(current_val1, "min", "< ")
-      current_val1 <- str_replace_all(current_val1, "max", "> ")
-      factors_list2$level1[n] <- current_val1
-      # current_val2 <- rounding(current_val2)
-      current_val2 <- paste0(factors_list2$level2[n], current_val2)
-      current_val2 <- str_replace_all(current_val2, "min", "< ")
-      current_val2 <- str_replace_all(current_val2, "max", "> ")
-      factors_list2$level2[n] <- current_val2
+         factors_list2$level2[n] <- supinf(current_val)
+print(factors_list2$all_edible[n])
+      }
+   else     # factor1 & factor2 are numbers
+      {
+         minmax1 <- minmaxing(factors_list2$level1[n])
+         minmax2 <- minmaxing(factors_list2$level2[n])
+         current_val1 <- training_set %>% filter(class == "poisonous") %>% select(factors_list2$factor1[n]) %>%  minmax1[[1]](.)
+         extremum1 <- training_set %>%  select(factors_list2$factor1[n]) %>%  minmax1[[1]](.)
+         current_val2 <- training_set %>% filter(class == "poisonous") %>% select(factors_list2$factor2[n]) %>%  minmax2[[1]](.)
+         extremum2 <- training_set %>%  select(factors_list2$factor2[n]) %>%  minmax2[[1]](.)
+         factors_list2$all_edible[n] <- current_val1 != extremum1 & current_val2 != extremum2
+         factors_list2$level1[n] <- supinf(current_val1)
+         factors_list2$level2[n] <- supinf(current_val2)
+      }
    }
 }
 
 
-relevant_factors <- factors_list1 %>% filter(all_edible == TRUE) %>% select(factor, level, type)
+relevant_factors1 <- factors_list1 %>% filter(all_edible == TRUE) %>% select(factor, level, type)
 
-str_factors <- relevant_factors %>% filter(type %in% c("factor", "logical", "character")) %>% mutate(level = str_c("== '", level, "'"))
-single_criteria <- relevant_factors %>% filter (type %in% c("numeric", "integer")) %>% rbind(str_factors, .)
+str_factors1 <- relevant_factors1 %>% filter(type %in% c("factor", "logical", "character")) %>% mutate(level = str_c("== '", level, "'"))
+single_criteria <- relevant_factors1 %>% filter (type %in% c("numeric", "integer")) %>% rbind(str_factors1, .)
 
-#single_criteria <- data.frame(criteria = c("cap.diameter", "habitat", "habitat", "ring.type", "spore.print.color", "stem.color", "stem.height", "stem.width", "veil.color"),
-#                              value = c("> 31", "== 'urban'", "== 'waste'", "== 'movable'", "== 'gray'", "== 'buff'", "> 21", "> 60", "== 'yellow'")
-#                              )
 
 double_criteria <- data.frame(criteria1 = c("gill.spacing", "gill.spacing", "gill.spacing", "gill.spacing", "season", "season", "veil.type", "veil.type", "stem.root", "stem.root", "stem.root", "stem.root", "stem.root", "stem.root", "stem.root", "stem.root"),
                               value1 = c("== 'distant'", "== 'distant'", "== 'close'", "== 'none'", "== 'spring'", "== 'summer'", "== 'universal'", "== 'universal'", "== 'bulbous'", "== 'bulbous'", "== 'bulbous'", "== 'bulbous'", "== 'bulbous'", "== 'bulbous'", "== 'bulbous'", "== 'swollen'"),
