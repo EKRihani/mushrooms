@@ -33,7 +33,9 @@ structure_uniques <- sapply(dataset, FUN = unique_length) # Count levels of all 
 
 
 # What is "stem.root = f" ? The metadata doesn't indicate it, let's find out...
-data_missing_f <- dataset %>% filter(stem.root == "f") %>% select(stem.root, stem.color, stem.surface, stem.width, stem.height) # select all useful (i.e. stem) properties
+data_missing_f <- dataset %>% 
+   filter(stem.root == "f") %>% 
+   select(stem.root, stem.color, stem.surface, stem.width, stem.height) # select all useful (i.e. stem.x) properties
 uniques_missing_f <- unique(data_missing_f)
 
 # Change dataset factors into intelligible words
@@ -74,8 +76,7 @@ structure_dataset$Levels <- as.numeric(structure_dataset$Levels)
 # Exploratory analysis with DataExplorer https://cran.r-project.org/web/packages/DataExplorer/vignettes/dataexplorer-intro.html
 plot_str(dataset)
 plot_bar(dataset)
-
-# With summarytools ? https://cran.r-project.org/web/packages/summarytools/vignettes/introduction.html
+# Avec summarytools ? https://cran.r-project.org/web/packages/summarytools/vignettes/introduction.html
 
 # Introductory summaries
 summary_number <- nrow(dataset)  # Mushroom count
@@ -125,6 +126,168 @@ validation_set <- trainvalid_set[test_index,]
 
 
 
+#######################################
+#     SIMPLE CLASSIFICATION MODEL     #
+#######################################
+
+# Create criteria lists for single variable classification
+factors_list <- training_set %>% select_if(is.factor) %>% gather(factor, level) %>% unique() %>% select(factor, level) %>% filter(factor != "class")
+
+factors_type <- training_set %>% summary.default %>% as.data.frame %>% group_by(Var1) %>% spread(Var2, Freq) %>% as.data.frame   # Get training_set structure
+factors_type$Class <- if_else(factors_type$Class == "-none-", factors_type$Mode, factors_type$Class)     # Create coherent Class column
+factors_type <- factors_type %>% select(-Mode, -Length)    # Clean factors_type
+colnames(factors_type) <- c("factor", "type")
+
+add_factorsL <- factors_type %>% filter(type == "logical") %>% slice(rep(1:n(), each = 2)) %>% mutate(level = rep(c("TRUE", "FALSE"), times = n()/2)) # Create TRUE/FALSE for each logical factor
+add_factorsN <- factors_type %>% filter(type == "numeric") %>% slice(rep(1:n(), each = 2)) %>% mutate(level = rep(c("min", "max"), times = n()/2))      # Create rows for numeric factors
+
+factors_list <- left_join(factors_list, factors_type)
+factors_list <- rbind(factors_list, add_factorsL, add_factorsN)
+
+# Build factor lists for 1 variable analysis
+factors_list1 <- factors_list
+factors_list1$all_edible <- FALSE       # Set as poisonous by default
+
+# Build factor lists for 2 variables analysis
+n <- nrow(factors_list)
+index_list2 <- t(combn(n, 2))          # Create all combinations of 2 factors
+half1_list2 <- factors_list[index_list2[,1],]
+colnames(half1_list2) <- c("factor1", "level1", "type1")
+half2_list2 <- factors_list[index_list2[,2],]
+colnames(half2_list2) <- c("factor2", "level2", "type2")
+factors_list2 <- cbind(half1_list2, half2_list2)
+factors_list2 <- factors_list2 %>% filter(factor1 != factor2)
+
+factors_list2$all_edible <- FALSE      # Set as poisonous by default
+rm(half1_list2, half2_list2, index_list2)    # Clear memory
+
+#Check factors_list2 structure : in theory, by construction, there should be NO text factor2 + numeric factor1
+factors_check <- factors_list2 %>% filter(type2  %in% c("logical", "factor", "character"), type1 %in% c("integer", "numeric")) %>% nrow
+
+
+#Define function : min/max and rounding mode selection
+minmaxing <- function(input_level){
+   rounding <- as.character(recode_factor(input_level, min = "floor", max = "ceiling")) # Set rounding by default (floor) if "min", excess (ceiling) if "max"
+   c(match.fun(input_level), match.fun(rounding))     # Set function vector with "min"/"max" string as function [[1]] and "floor"/"ceiling" string as function [[2]]
+}
+
+# Define function : rounding + min/max concatenation + sup/inf conversion
+supinf <- function(input_value, list_number, level_number){
+   level <- paste0("factors_list", list_number, "$level", level_number, "[n]")  # Select factors_list, factors_list1 or factors_list2 .$levels
+   input_value %>%
+      minmax[[2]](.) %>%         # Round to lower (if level = "min") or higher (if level = "max") value
+      paste0(eval(parse(text = level)), .) %>%      # Paste "min" or "max" before rounded value
+      str_replace_all(., "min", "< ") %>%      # Replace "min" by "< "
+      str_replace_all(., "max", "> ")      # Paste "max" by "> "
+}
+
+
+# Find all "edible-only" criteria
+l <- nrow(factors_list1)
+for (n in 1:l){
+    if(factors_list1$type[n] %in% c("logical", "factor", "character"))
+       {
+          factors_list1$all_edible[n] <-training_set %>% 
+             filter(class == "poisonous", get(factors_list1$factor[n]) == factors_list1$level[n]) %>% 
+             nrow() == 0  # Find if (for this factor/level combination) there are no poisonous, i.e. ONLY edible species
+       }
+    else          # Type = integer or numeric
+       {
+         minmax <- minmaxing(factors_list1$level[n])     # Setting min/max and rounding values for ".$level"
+         current_val <- training_set %>% filter(class == "poisonous") %>% select(factors_list1$factor[n]) %>% minmax[[1]](.)
+         extremum <- training_set %>%  select(factors_list1$factor[n]) %>% minmax[[1]](.)
+         factors_list1$all_edible[n] <- current_val != extremum
+         factors_list1$level[n] <- supinf(current_val, "1", "")   # Round by excess or default, paste < or > on factors_list"1"$level""
+       }
+}
+
+l <- nrow(factors_list2)
+for (n in 1:l){
+   if(factors_list2$type1[n] %in% c("logical", "factor", "character") & factors_list2$type2[n] %in% c("logical", "factor", "character")) # factor1 & factor 2 are text
+   {
+      count <- training_set %>%
+         filter(get(factors_list2$factor1[n]) == factors_list2$level1[n], get(factors_list2$factor2[n]) == factors_list2$level2[n]) %>%
+         nrow
+      count_poison <- training_set %>%
+         filter(class == "poisonous", get(factors_list2$factor1[n]) == factors_list2$level1[n], get(factors_list2$factor2[n]) == factors_list2$level2[n]) %>%
+         nrow
+      factors_list2$all_edible[n] <- count != 0 & count_poison == 0 # Find if (for this factor/level combination) there are mushrooms AND no poisonous, i.e. ONLY edible species
+   }
+   else          # factor1 is text & factor2 is number
+   {if(factors_list2$type1[n] %in% c("logical", "factor", "character") & factors_list2$type2[n] %in% c("numeric", "integer"))
+      {
+         minmax <- minmaxing(factors_list2$level2[n])
+         current_val <-training_set %>% filter(class == "poisonous", get(factors_list2$factor1[n]) == factors_list2$level1[n]) %>% select(factors_list2$factor2[n]) %>% minmax[[1]](.) # %>% as.character
+         extremum <- training_set %>% filter(get(factors_list2$factor1[n]) == factors_list2$level1[n]) %>% select(factors_list2$factor2[n]) %>% minmax[[1]](.) # %>% as.character
+         factors_list2$all_edible[n] <- current_val != extremum
+         factors_list2$level2[n] <- supinf(current_val, 2, 2)     # Round by excess or default, paste < or > on factors_list"2"$level"2"
+      }
+   else     # factor1 & factor2 are numbers
+      {
+         minmax1 <- minmaxing(factors_list2$level1[n])
+         minmax2 <- minmaxing(factors_list2$level2[n])
+         current_val1 <- training_set %>% filter(class == "poisonous") %>% select(factors_list2$factor1[n]) %>%  minmax1[[1]](.)
+         extremum1 <- training_set %>%  select(factors_list2$factor1[n]) %>%  minmax1[[1]](.)
+         current_val2 <- training_set %>% filter(class == "poisonous") %>% select(factors_list2$factor2[n]) %>%  minmax2[[1]](.)
+         extremum2 <- training_set %>%  select(factors_list2$factor2[n]) %>%  minmax2[[1]](.)
+         factors_list2$all_edible[n] <- current_val1 != extremum1 & current_val2 != extremum2
+         factors_list2$level1[n] <- supinf(current_val1, 2, 1)     # Round by excess or default, paste < or > on factors_list"2"$level"1"
+         factors_list2$level2[n] <- supinf(current_val2, 2, 2)     # Round by excess or default, paste < or > on factors_list"2"$level"2"
+      }
+   }
+}
+
+
+relevant_factors1 <- factors_list1 %>% filter(all_edible == TRUE) %>% select(factor, level, type)
+relevant_factors2 <- factors_list2 %>% filter(all_edible == TRUE) %>% select(factor1, level1, type1, factor2, level2, type2)
+
+str_factors1 <- relevant_factors1 %>% filter(type %in% c("factor", "logical", "character")) %>% mutate(level = str_c("== '", level, "'"))
+single_criteria <- relevant_factors1 %>% filter (type %in% c("numeric", "integer")) %>% rbind(str_factors1, .)
+
+str_factors2f <- relevant_factors2 %>% filter(type1 %in% c("factor", "logical", "character")) %>% mutate(level1 = str_c("== '", level1, "'"))
+str_factors2ff <- str_factors2f %>% filter(type2 %in% c("factor", "logical", "character")) %>% mutate(level2 = str_c("== '", level2, "'"))
+str_factors2f <- str_factors2f %>% filter(type2 %in% c("numeric", "integer"))  %>% rbind(str_factors2ff, .)
+double_criteria <- relevant_factors2 %>% filter(type1 %in% c("numeric", "integer"))  %>% rbind(str_factors2f, .)
+
+# double_criteria <- data.frame(criteria1 = c("gill.spacing", "gill.spacing", "gill.spacing", "gill.spacing", "season", "season", "veil.type", "veil.type", "stem.root", "stem.root", "stem.root", "stem.root", "stem.root", "stem.root", "stem.root", "stem.root"),
+#                               value1 = c("== 'distant'", "== 'distant'", "== 'close'", "== 'none'", "== 'spring'", "== 'summer'", "== 'universal'", "== 'universal'", "== 'bulbous'", "== 'bulbous'", "== 'bulbous'", "== 'bulbous'", "== 'bulbous'", "== 'bulbous'", "== 'bulbous'", "== 'swollen'"),
+#                               criteria2 = c("has.ring", "season", "stem.height", "stem.width", "stem.width", "stem.width", "has.ring", "does.bruise.or.bleed", "does.bruise.or.bleed", "veil.type", "has.ring", "season", "gill.spacing", "stem.height", "stem.width", "stem.width"),
+#                               value2 = c("== TRUE", "== 'spring'", "> 16", "> 40", "> 29", "> 48", "== FALSE", "== TRUE", "== TRUE", "== 'universal'", "== TRUE", "== 'spring'", "== ''", "> 8", "> 20", "> 23")
+#                               )
+
+# Concatenate list items as one criteria string
+mono_criteria_list <- paste(single_criteria$factor, single_criteria$level, collapse = " | ")
+double_criteria_list <- paste("(", double_criteria$factor1, double_criteria$level1, "&", double_criteria$factor2, double_criteria$level2, ")",collapse = " | ")
+bi_criteria_list <- double_criteria_list
+#bi_criteria_list <- paste(mono_criteria_list, "|", double_criteria_list)
+
+# Create a prediction dataset, with boolean factors (meaning "is.edible")
+predictions <- validation_set
+predictions$reference <- as.logical(as.character(recode_factor(predictions$class, edible = TRUE, poisonous = FALSE))) # Switch to logical values
+
+# Apply the three predictive models
+predictions$stupid_predict = FALSE   # Consider all mushrooms as poisonous
+predictions <- predictions %>% mutate(mono_predict = eval(parse(text = mono_criteria_list)))
+predictions <- predictions %>% mutate(bi_predict = eval(parse(text = bi_criteria_list)))
+
+# Convert logical to factors (confusionMatrix works with factors)
+predictions$reference <- as.factor(predictions$reference)
+predictions$stupid_predict <- factor(predictions$stupid_predict, levels = c("FALSE","TRUE")) # Create level TRUE (not present) for confusionMatrix use (reference & prediction must have the same levels)
+predictions$mono_predict <- as.factor(predictions$mono_predict)
+predictions$bi_predict <- as.factor(predictions$bi_predict)
+
+# Confusion matrices
+CM_stupid <- confusionMatrix(data = predictions$stupid_predict, reference = predictions$reference, positive = "TRUE")
+CM_monocrit <- confusionMatrix(data = predictions$mono_predict, reference = predictions$reference, positive = "TRUE")
+CM_bicrit <- confusionMatrix(data = predictions$bi_predict, reference = predictions$reference, positive = "TRUE")
+
+CM_monocrit["byClass"]
+CM_bicrit["byClass"]
+CM_monocrit["table"]
+CM_bicrit["table"]
+
+
+
 #############################################
 #     DESCRIPTIVE TRAINING SET ANALYSIS     #
 #############################################
@@ -138,7 +301,7 @@ for (n in 2:l){    # Column 1 (class) isn't plotted since it's the fill attribut
       ylab("Frequency") +
       xlab(dataset_names[n]) +
       scale_y_log10() +
-#      scale_color_brewer(palette = "Set1", direction = -1) +
+      #      scale_color_brewer(palette = "Set1", direction = -1) +
       theme_bw()
    if(structure_dataset$Final[n] %in% c("integer", "numeric"))  # Histogram for integer/numeric, Barplot for character/factors/logical
    {plot <- plot + geom_histogram()}
@@ -178,186 +341,20 @@ pair_plots <- ggpairs(
    training_set,
    columns = c(2,6,7,10,11),
    lower = NULL,
-    diag = list(continuous = wrap("densityDiag", alpha = .6), 
-                discrete = wrap("barDiag")
-                ),
+   diag = list(continuous = wrap("densityDiag", alpha = .6), 
+               discrete = wrap("barDiag")
+   ),
    upper = list(continuous = wrap("points", alpha = .3, shape = 20), 
                 combo = wrap("dot", alpha = .3, shape = 20),
                 discrete = wrap("dot_no_facet", alpha = .3, shape = 20)
-               ),
+   ),
    ggplot2::aes(color = class)
-   )
-
-#######################################
-#     SIMPLE CLASSIFICATION MODEL     #
-#######################################
+)
 
 
-# Create criteria lists for single variable classification
-
-factors_list <- training_set %>% select_if(is.factor) %>% gather(factor, level) %>% unique() %>% select(factor, level) %>% filter(factor != "class")
-
-factors_type <- training_set %>% summary.default %>% as.data.frame %>% group_by(Var1) %>% spread(Var2, Freq) %>% as.data.frame   # Get training_set structure
-factors_type$Class <- if_else(factors_type$Class == "-none-", factors_type$Mode, factors_type$Class)     # Create coherent Class column
-factors_type <- factors_type %>% select(-Mode, -Length)    # Clean factors_type
-colnames(factors_type) <- c("factor", "type")
-
-add_factorsL <- factors_type %>% filter(type == "logical") %>% slice(rep(1:n(), each = 2)) %>% mutate(level = rep(c("TRUE", "FALSE"), times = n()/2)) # Create TRUE/FALSE for each logical factor
-add_factorsN <- factors_type %>% filter(type == "numeric") %>% slice(rep(1:n(), each = 2)) %>% mutate(level = rep(c("min", "max"), times = n()/2))      # Create rows for numeric factors
-
-factors_list <- left_join(factors_list, factors_type)
-factors_list <- rbind(factors_list, add_factorsL, add_factorsN)
-
-# Build factor lists for 1 variable analysis
-factors_list1 <- factors_list
-factors_list1$all_edible <- FALSE       # Set as poisonous by default
-
-# Build factor lists for 2 variables analysis
-n <- nrow(factors_list)
-index_list2 <- t(combn(n, 2))          # Create all combinations of 2 factors
-half1_list2 <- factors_list[index_list2[,1],]
-colnames(half1_list2) <- c("factor1", "level1", "type1")
-half2_list2 <- factors_list[index_list2[,2],]
-colnames(half2_list2) <- c("factor2", "level2", "type2")
-factors_list2 <- cbind(half1_list2, half2_list2)
-factors_list2 <- factors_list2 %>% filter(factor1 != factor2)
-
-factors_list2$all_edible <- FALSE      # Set as poisonous by default
-rm(half1_list2, half2_list2, index_list2)    # Clear memory
-
-#Check factors_list2 structure : in theory, by construction, there should be NO text factor2 + numeric factor1
-factors_check <- factors_list2 %>% filter(type2  %in% c("logical", "factor", "character"), type1 %in% c("integer", "numeric")) %>% nrow
-
-
-# Define function : min/max and rounding mode selection
-minmaxing <- function(input_level){
-   rounding <- str_replace_all(input_level, "min", "floor")      # Set rounding by default if "min" input (floor)
-   rounding <- str_replace_all(input_level, "max", "ceiling")    # Set rounding : by excess if "max" input (ceiling)
-   c(match.fun(input_level), match.fun(rounding))     # Set function vector with "min"/"max" string as function [[1]] and "floor"/"ceiling" string as function [[2]]
-   #c(input_level, rounding)
-}
-
-# Define function : rounding + min/max concatenation + sup/inf conversion
-supinf <- function(input_value){
-   input_value %>%
-      minmax[[2]](.) %>%         # Round to lower (if level = "min") or higher (if level = "max") value
-      paste0(factors_list$level[n], .) %>%      # Paste "min" or "max" before rounded value
-      str_replace_all(., "min", "< ") %>%      # Replace "min" by "< "
-      str_replace_all(., "max", "> ")      # Paste "max" by "> "
-}
-
-
-# Find all "edible-only" criteria
-l <- nrow(factors_list1)
-for (n in 1:l){
-    if(factors_list1$type[n] %in% c("logical", "factor", "character"))
-       {
-          factors_list1$all_edible[n] <-training_set %>% 
-             filter(class == "poisonous", get(factors_list1$factor[n]) == factors_list1$level[n]) %>% 
-             nrow() == 0  # Find if (for this factor/level combination) there are no poisonous, i.e. ONLY edible species
-       }
-    else          # Type = integer or numeric
-       {
-         minmax <- minmaxing(factors_list1$level[n])
-         current_val <- training_set %>% filter(class == "poisonous") %>% select(factors_list1$factor[n]) %>% minmax[[1]](.)
-         extremum <- training_set %>%  select(factors_list1$factor[n]) %>% minmax[[1]](.)
-         factors_list1$all_edible[n] <- current_val != extremum
-         factors_list1$level[n] <- supinf(current_val)
-       }
-}
-
-
-
-# SAUVEGARDE/SWITCH factorslist POUR DEBUGAGE
-factors_list2b <- factors_list2
-
-
-factors_list2 <- factors_list2b
-l <- nrow(factors_list2)
-
-for (n in 8002:8003){ # 1:l à remplacer : FactorFactor = 1:2 ; FactorLogical = 117:118 ; FactorNumeric = 122:123 ; NumericNumeric = 8000:8001
-   if(factors_list2$type1[n] %in% c("logical", "factor", "character") & factors_list2$type2[n] %in% c("logical", "factor", "character")) # factor1 & factor 2 are text
-   {
-      count <- training_set %>%
-         filter(get(factors_list2$factor1[n]) == factors_list2$level1[n], get(factors_list2$factor2[n]) == factors_list2$level2[n]) %>%
-         nrow
-      count_poison <- training_set %>%
-         filter(class == "poisonous", get(factors_list2$factor1[n]) == factors_list2$level1[n], get(factors_list2$factor2[n]) == factors_list2$level2[n]) %>%
-         nrow
-      factors_list2$all_edible[n] <- count != 0 & count_poison == 0 # Find if (for this factor/level combination) there are mushrooms AND no poisonous, i.e. ONLY edible species
-print(factors_list2$all_edible[n])
-   }
-   else          # factor1 is text & factor2 is number
-   {if(factors_list2$type1[n] %in% c("logical", "factor", "character") & factors_list2$type2[n] %in% c("numeric", "integer"))
-      {
-         minmax <- minmaxing(factors_list2$level2[n])
-         current_val <-training_set %>%
-            filter(class == "poisonous", get(factors_list2$factor1[n]) == factors_list2$level1[n]) %>%
-            select(factors_list2$factor2[n]) %>%
-            minmax[[1]](.) # %>% as.character
-         extremum <- training_set %>%
-            filter(get(factors_list2$factor1[n]) == factors_list2$level1[n]) %>%
-            select(factors_list2$factor2[n]) %>%
-            minmax[[1]](.) # %>% as.character
-         factors_list2$all_edible[n] <- current_val != extremum
-         factors_list2$level2[n] <- supinf(current_val)
-print(factors_list2$all_edible[n])
-      }
-   else     # factor1 & factor2 are numbers
-      {
-         minmax1 <- minmaxing(factors_list2$level1[n])
-         minmax2 <- minmaxing(factors_list2$level2[n])
-         current_val1 <- training_set %>% filter(class == "poisonous") %>% select(factors_list2$factor1[n]) %>%  minmax1[[1]](.)
-         extremum1 <- training_set %>%  select(factors_list2$factor1[n]) %>%  minmax1[[1]](.)
-         current_val2 <- training_set %>% filter(class == "poisonous") %>% select(factors_list2$factor2[n]) %>%  minmax2[[1]](.)
-         extremum2 <- training_set %>%  select(factors_list2$factor2[n]) %>%  minmax2[[1]](.)
-         factors_list2$all_edible[n] <- current_val1 != extremum1 & current_val2 != extremum2
-         factors_list2$level1[n] <- supinf(current_val1)
-         factors_list2$level2[n] <- supinf(current_val2)
-      }
-   }
-}
-
-
-relevant_factors1 <- factors_list1 %>% filter(all_edible == TRUE) %>% select(factor, level, type)
-
-str_factors1 <- relevant_factors1 %>% filter(type %in% c("factor", "logical", "character")) %>% mutate(level = str_c("== '", level, "'"))
-single_criteria <- relevant_factors1 %>% filter (type %in% c("numeric", "integer")) %>% rbind(str_factors1, .)
-
-
-double_criteria <- data.frame(criteria1 = c("gill.spacing", "gill.spacing", "gill.spacing", "gill.spacing", "season", "season", "veil.type", "veil.type", "stem.root", "stem.root", "stem.root", "stem.root", "stem.root", "stem.root", "stem.root", "stem.root"),
-                              value1 = c("== 'distant'", "== 'distant'", "== 'close'", "== 'none'", "== 'spring'", "== 'summer'", "== 'universal'", "== 'universal'", "== 'bulbous'", "== 'bulbous'", "== 'bulbous'", "== 'bulbous'", "== 'bulbous'", "== 'bulbous'", "== 'bulbous'", "== 'swollen'"),
-                              criteria2 = c("has.ring", "season", "stem.height", "stem.width", "stem.width", "stem.width", "has.ring", "does.bruise.or.bleed", "does.bruise.or.bleed", "veil.type", "has.ring", "season", "gill.spacing", "stem.height", "stem.width", "stem.width"),
-                              value2 = c("== TRUE", "== 'spring'", "> 16", "> 40", "> 29", "> 48", "== FALSE", "== TRUE", "== TRUE", "== 'universal'", "== TRUE", "== 'spring'", "== ''", "> 8", "> 20", "> 23")
-                              )
-
-# Concatenate list items as one criteria string
-mono_criteria_list <- paste(single_criteria$factor, single_criteria$level, collapse = " | ")
-double_criteria_list <- paste("(", double_criteria$criteria1, double_criteria$value1, "&", double_criteria$criteria2, double_criteria$value2, ")",collapse = " | ")
-bi_criteria_list <- paste(mono_criteria_list, "|", double_criteria_list)
-
-# Create a prediction dataset, with boolean factors (meaning "is.edible")
-predictions <- validation_set
-predictions$reference <- as.logical(as.character(recode_factor(predictions$class, edible = TRUE, poisonous = FALSE))) # Switch to logical values
-
-# Apply the three predictive models
-predictions$stupid_predict = FALSE   # Consider all mushrooms as poisonous
-predictions <- predictions %>% mutate(mono_predict = eval(parse(text = mono_criteria_list)))
-predictions <- predictions %>% mutate(bi_predict = eval(parse(text = bi_criteria_list)))
-
-# Convert logical to factors (confusionMatrix works with factors)
-predictions$reference <- as.factor(predictions$reference)
-predictions$stupid_predict <- factor(predictions$stupid_predict, levels = c("FALSE","TRUE")) # Create level TRUE (not present) for confusionMatrix use (reference & prediction must have the same levels)
-predictions$mono_predict <- as.factor(predictions$mono_predict)
-predictions$bi_predict <- as.factor(predictions$bi_predict)
-
-# Confusion matrices
-CM_stupid <- confusionMatrix(data = predictions$stupid_predict, reference = predictions$reference, positive = "TRUE")
-CM_monocrit <- confusionMatrix(data = predictions$mono_predict, reference = predictions$reference, positive = "TRUE")
-CM_bicrit <- confusionMatrix(data = predictions$bi_predict, reference = predictions$reference, positive = "TRUE")
-
-CM_monocrit["byClass"]
-CM_monocrit["table"]
+###################################################
+#     TRAINING SET ANALYSIS WITH CARET MODELS     #
+###################################################
 
 #https://topepo.github.io/caret/available-models.html
 fit_test <- function(fit_model){
@@ -397,6 +394,8 @@ model_list <- names(getModelInfo())
 
 save.image(file = "EKR-mushrooms.RData")
 load("EKR-mushrooms.RData")
+
+
 
 ####################################################################
 # # Choix modèles avec le plus de dissimilarités
