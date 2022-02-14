@@ -143,6 +143,7 @@ add_factorsN <- factors_type %>% filter(type == "numeric") %>% slice(rep(1:n(), 
 
 factors_list <- left_join(factors_list, factors_type)
 factors_list <- rbind(factors_list, add_factorsL, add_factorsN)
+rm(add_factorsL, add_factorsN)    # Clear environment
 
 # Build factor lists for 1 variable analysis
 factors_list1 <- factors_list
@@ -159,7 +160,7 @@ factors_list2 <- cbind(half1_list2, half2_list2)
 factors_list2 <- factors_list2 %>% filter(factor1 != factor2)
 
 factors_list2$all_edible <- FALSE      # Set as poisonous by default
-rm(half1_list2, half2_list2, index_list2)    # Clear memory
+rm(half1_list2, half2_list2, index_list2)    # Clear environment
 
 #Check factors_list2 structure : in theory, by construction, there should be NO text factor2 + numeric factor1
 factors_check <- factors_list2 %>% filter(type2  %in% c("logical", "factor", "character"), type1 %in% c("integer", "numeric")) %>% nrow
@@ -201,6 +202,25 @@ for (n in 1:l){
        }
 }
 
+# Get relevant (i.e. edible-only) factors, data types and levels (criterion)
+factors_to_remove <- factors_list1 %>% filter(all_edible == TRUE, type %in% c("factor", "logical", "character")) %>% select(factor, level)
+
+# Concatenate all factor/levels as one criteria string, before removing them from the dual-criteria list
+# one_crit_factor1 <- paste0("factor1 != '", factors_to_remove$factor,"'", collapse = " | ")
+# one_crit_factor2 <- paste0("factor2 != '", factors_to_remove$factor,"'", collapse = " | ")
+# one_crit_level1 <- paste0("level1 != '", factors_to_remove$level,"'", collapse = " | ")
+# one_crit_level2 <- paste0("level2 != '", factors_to_remove$level,"'", collapse = " | ")
+#single_criteria_removal <- paste(one_crit_factor1, one_crit_factor2, one_crit_level1, one_crit_level2, sep = " | ")
+
+one_crit1 <- paste0("(factors_list2$factor1 == '", factors_to_remove$factor,"' & factors_list2$level1 == '", factors_to_remove$level,"')", collapse = " | ")
+one_crit2 <- paste0("(factors_list2$factor2 == '", factors_to_remove$factor,"' & factors_list2$level2 == '", factors_to_remove$level,"')", collapse = " | ")
+single_crit_removal <- paste(one_crit1, one_crit2, sep = " | ")
+single_crit_index <- which(eval(parse(text = single_crit_removal)))
+
+# Remove single criteria with only edible mushrooms
+factors_list2 <- factors_list2[-single_crit_index,]
+rm(one_crit1, one_crit2, single_crit_removal, single_crit_index)    # Clear environment
+
 l <- nrow(factors_list2)
 for (n in 1:l){
    if(factors_list2$type1[n] %in% c("logical", "factor", "character") & factors_list2$type2[n] %in% c("logical", "factor", "character")) # factor1 & factor 2 are text
@@ -237,42 +257,37 @@ for (n in 1:l){
    }
 }
 
-
+# Show relevant (i.e. edible-only) factors, data types and levels (criterion)
 relevant_factors1 <- factors_list1 %>% filter(all_edible == TRUE) %>% select(factor, level, type)
 relevant_factors2 <- factors_list2 %>% filter(all_edible == TRUE) %>% select(factor1, level1, type1, factor2, level2, type2)
 
+# Transform all text factors into "=='factors'" for data analysis
 str_factors1 <- relevant_factors1 %>% filter(type %in% c("factor", "logical", "character")) %>% mutate(level = str_c("== '", level, "'"))
 single_criteria <- relevant_factors1 %>% filter (type %in% c("numeric", "integer")) %>% rbind(str_factors1, .)
-
 str_factors2f <- relevant_factors2 %>% filter(type1 %in% c("factor", "logical", "character")) %>% mutate(level1 = str_c("== '", level1, "'"))
 str_factors2ff <- str_factors2f %>% filter(type2 %in% c("factor", "logical", "character")) %>% mutate(level2 = str_c("== '", level2, "'"))
 str_factors2f <- str_factors2f %>% filter(type2 %in% c("numeric", "integer"))  %>% rbind(str_factors2ff, .)
 double_criteria <- relevant_factors2 %>% filter(type1 %in% c("numeric", "integer"))  %>% rbind(str_factors2f, .)
+rm(str_factors1, str_factors2f, str_factors2ff)    # Clear environment
 
-# double_criteria <- data.frame(criteria1 = c("gill.spacing", "gill.spacing", "gill.spacing", "gill.spacing", "season", "season", "veil.type", "veil.type", "stem.root", "stem.root", "stem.root", "stem.root", "stem.root", "stem.root", "stem.root", "stem.root"),
-#                               value1 = c("== 'distant'", "== 'distant'", "== 'close'", "== 'none'", "== 'spring'", "== 'summer'", "== 'universal'", "== 'universal'", "== 'bulbous'", "== 'bulbous'", "== 'bulbous'", "== 'bulbous'", "== 'bulbous'", "== 'bulbous'", "== 'bulbous'", "== 'swollen'"),
-#                               criteria2 = c("has.ring", "season", "stem.height", "stem.width", "stem.width", "stem.width", "has.ring", "does.bruise.or.bleed", "does.bruise.or.bleed", "veil.type", "has.ring", "season", "gill.spacing", "stem.height", "stem.width", "stem.width"),
-#                               value2 = c("== TRUE", "== 'spring'", "> 16", "> 40", "> 29", "> 48", "== FALSE", "== TRUE", "== TRUE", "== 'universal'", "== TRUE", "== 'spring'", "== ''", "> 8", "> 20", "> 23")
-#                               )
-
-# Concatenate list items as one criteria string
+# Concatenate all factor/levels as one criteria string
 mono_criteria_list <- paste(single_criteria$factor, single_criteria$level, collapse = " | ")
 double_criteria_list <- paste("(", double_criteria$factor1, double_criteria$level1, "&", double_criteria$factor2, double_criteria$level2, ")",collapse = " | ")
-bi_criteria_list <- double_criteria_list
-#bi_criteria_list <- paste(mono_criteria_list, "|", double_criteria_list)
+#bi_criteria_list <- double_criteria_list
+bi_criteria_list <- paste(mono_criteria_list, "|", double_criteria_list)
 
-# Create a prediction dataset, with boolean factors (meaning "is.edible")
+# Create a prediction dataset, with boolean factors (meaning "is.edible") as .$reference
 predictions <- validation_set
 predictions$reference <- as.logical(as.character(recode_factor(predictions$class, edible = TRUE, poisonous = FALSE))) # Switch to logical values
 
-# Apply the three predictive models
+# Apply the three predictive models : stupid , single-criteron, double-criteria
 predictions$stupid_predict = FALSE   # Consider all mushrooms as poisonous
 predictions <- predictions %>% mutate(mono_predict = eval(parse(text = mono_criteria_list)))
 predictions <- predictions %>% mutate(bi_predict = eval(parse(text = bi_criteria_list)))
 
-# Convert logical to factors (confusionMatrix works with factors)
+# Convert .$reference from logical to factor (confusionMatrix works with factors)
 predictions$reference <- as.factor(predictions$reference)
-predictions$stupid_predict <- factor(predictions$stupid_predict, levels = c("FALSE","TRUE")) # Create level TRUE (not present) for confusionMatrix use (reference & prediction must have the same levels)
+predictions$stupid_predict <- factor(predictions$stupid_predict, levels = c("FALSE","TRUE")) # Create level TRUE (not present in stupid model) for confusionMatrix use (reference & prediction must have the same levels)
 predictions$mono_predict <- as.factor(predictions$mono_predict)
 predictions$bi_predict <- as.factor(predictions$bi_predict)
 
@@ -285,14 +300,15 @@ CM_monocrit["byClass"]
 CM_bicrit["byClass"]
 CM_monocrit["table"]
 CM_bicrit["table"]
-
-
+predictions %>% filter (reference == FALSE & bi_predict == TRUE)
 
 #############################################
 #     DESCRIPTIVE TRAINING SET ANALYSIS     #
 #############################################
 
 # Plot all monovariate distributions of the training set (poisonous vs edible)
+l <- nrow(structure_dataset)
+
 for (n in 2:l){    # Column 1 (class) isn't plotted since it's the fill attribute
    plot_title <- paste("Mushroom", dataset_names[n], "distribution")
    plot <- training_set %>%
@@ -309,9 +325,9 @@ for (n in 2:l){    # Column 1 (class) isn't plotted since it's the fill attribut
    {plot <- plot + geom_bar()}
    plotname <- paste0("train_distrib_",dataset_names[n])   # Concatenate "train_distrib" with the column name
    assign(plotname, plot)     # Assign the plot to the train_distrib_colname name
-   rm(plot)    # Clear memory
+   rm(plot)    # Clear environment
 }
-
+''
 # For bivariate analysis : reduced dataset factor names list (<= 6 levels or numeric)
 structure_dataset_reduced <- structure_dataset %>% filter(Levels <= 6 | Final == "numeric")
 dataset_reduced_names <-  rownames(structure_dataset_reduced)
@@ -386,7 +402,6 @@ confusionMatrix(prediction, validation_set$class)$overall[["Accuracy"]]
 plot(fitting)
 plot(fitting$finalModel, margin = .1)
 text(fitting$finalModel, cex = .75)
-#text(fitting$finalModel, cex = .75)
 
 model_list <- names(getModelInfo())
 
@@ -394,31 +409,3 @@ model_list <- names(getModelInfo())
 
 save.image(file = "EKR-mushrooms.RData")
 load("EKR-mushrooms.RData")
-
-
-
-####################################################################
-# # Choix modèles avec le plus de dissimilarités
-# #https://topepo.github.io/caret/models-clustered-by-tag-similarity.html
-# 
-# # Download caret models tags list, import
-# model_tags <- tempfile()
-# download.file("https://topepo.github.io/caret/tag_data.csv", model_tags)
-# model_tags <- read.csv(model_tags, row.names = 1)
-# model_tags <- as.matrix(model_tags)
-# 
-# # Select regression models
-# regression_models <- tag[tag[,"Regression"] == 1,]
-# 
-# all <- 1:nrow(regression_models)
-# ## Seed the analysis with the SVM model
-# start <- grep("(svmRadial)", rownames(regression_models), fixed = TRUE)
-# pool <- all[all != start]
-# 
-# ## Select 4 model models by maximizing the Jaccard dissimilarity between sets of models
-# nextMods <- maxDissim(regression_models[start,,drop = FALSE],
-#                       regression_models[pool, ],
-#                       method = "Jaccard",
-#                       n = 4)
-# 
-# rownames(regression_models)[c(start, nextMods)]
