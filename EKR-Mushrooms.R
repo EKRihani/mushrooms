@@ -167,21 +167,25 @@ factors_check <- factors_list2 %>% filter(type2  %in% c("logical", "factor", "ch
 
 
 #Define function : min/max and rounding mode selection
-minmaxing <- function(input_level){
-   rounding <- as.character(recode_factor(input_level, min = "floor", max = "ceiling")) # Set rounding by default (floor) if "min", excess (ceiling) if "max"
-   c(match.fun(input_level), match.fun(rounding))     # Set function vector with "min"/"max" string as function [[1]] and "floor"/"ceiling" string as function [[2]]
-}
+minmaxing <- function(input_level, margin_value){
+   margin <- as.numeric(as.character(recode_factor(input_level, min = -margin_value, max = margin_value))) # Set margin as +M (max)/ or -M (min)
+   c(match.fun(input_level), margin)   # Set vector with "min"/"max" function as [[1]] and +/- margin numeric as [[2]]
+   }
 
 # Define function : rounding + min/max concatenation + sup/inf conversion
-supinf <- function(input_value, list_number, level_number){
+supinf <- function(input_value, min_max, list_number, level_number){
    level <- paste0("factors_list", list_number, "$level", level_number, "[n]")  # Select factors_list, factors_list1 or factors_list2 .$levels
    input_value %>%
-      minmax[[2]](.) %>%         # Round to lower (if level = "min") or higher (if level = "max") value
+      round(., digits = 1) %>% 
+       + min_max[[2]] %>%   # Add/remove margin
+      max(., 0) %>%        # Change negatives values to zero
       paste0(eval(parse(text = level)), .) %>%      # Paste "min" or "max" before rounded value
       str_replace_all(., "min", "< ") %>%      # Replace "min" by "< "
       str_replace_all(., "max", "> ")      # Paste "max" by "> "
 }
 
+
+margin <- 1.1
 
 # Find all "edible-only" criteria
 l <- nrow(factors_list1)
@@ -194,11 +198,11 @@ for (n in 1:l){
        }
     else          # Type = integer or numeric
        {
-         minmax <- minmaxing(factors_list1$level[n])     # Setting min/max and rounding values for ".$level"
+         minmax <- minmaxing(factors_list1$level[n], margin)     # Setting min/max and rounding values for ".$level"
          current_val <- training_set %>% filter(class == "poisonous") %>% select(factors_list1$factor[n]) %>% minmax[[1]](.)
          extremum <- training_set %>%  select(factors_list1$factor[n]) %>% minmax[[1]](.)
          factors_list1$all_edible[n] <- current_val != extremum
-         factors_list1$level[n] <- supinf(current_val, "1", "")   # Round by excess or default, paste < or > on factors_list"1"$level""
+         factors_list1$level[n] <- supinf(current_val, minmax, "1", "")   # Round by excess or default, paste < or > on factors_list"1"$level""
        }
 }
 
@@ -206,18 +210,12 @@ for (n in 1:l){
 factors_to_remove <- factors_list1 %>% filter(all_edible == TRUE, type %in% c("factor", "logical", "character")) %>% select(factor, level)
 
 # Concatenate all factor/levels as one criteria string, before removing them from the dual-criteria list
-# one_crit_factor1 <- paste0("factor1 != '", factors_to_remove$factor,"'", collapse = " | ")
-# one_crit_factor2 <- paste0("factor2 != '", factors_to_remove$factor,"'", collapse = " | ")
-# one_crit_level1 <- paste0("level1 != '", factors_to_remove$level,"'", collapse = " | ")
-# one_crit_level2 <- paste0("level2 != '", factors_to_remove$level,"'", collapse = " | ")
-#single_criteria_removal <- paste(one_crit_factor1, one_crit_factor2, one_crit_level1, one_crit_level2, sep = " | ")
-
 one_crit1 <- paste0("(factors_list2$factor1 == '", factors_to_remove$factor,"' & factors_list2$level1 == '", factors_to_remove$level,"')", collapse = " | ")
 one_crit2 <- paste0("(factors_list2$factor2 == '", factors_to_remove$factor,"' & factors_list2$level2 == '", factors_to_remove$level,"')", collapse = " | ")
-single_crit_removal <- paste(one_crit1, one_crit2, sep = " | ")
-single_crit_index <- which(eval(parse(text = single_crit_removal)))
+single_crit_removal <- paste(one_crit1, one_crit2, sep = " | ")   # Concatenate factor1 and factor2 lists
+single_crit_index <- which(eval(parse(text = single_crit_removal)))  # Get all indices
 
-# Remove single criteria with only edible mushrooms
+# Remove all single-criteria with only edible mushrooms from the dual-criteria list
 factors_list2 <- factors_list2[-single_crit_index,]
 rm(one_crit1, one_crit2, single_crit_removal, single_crit_index)    # Clear environment
 
@@ -236,23 +234,23 @@ for (n in 1:l){
    else          # factor1 is text & factor2 is number
    {if(factors_list2$type1[n] %in% c("logical", "factor", "character") & factors_list2$type2[n] %in% c("numeric", "integer"))
       {
-         minmax <- minmaxing(factors_list2$level2[n])
+         minmax <- minmaxing(factors_list2$level2[n], margin)
          current_val <-training_set %>% filter(class == "poisonous", get(factors_list2$factor1[n]) == factors_list2$level1[n]) %>% select(factors_list2$factor2[n]) %>% minmax[[1]](.) # %>% as.character
          extremum <- training_set %>% filter(get(factors_list2$factor1[n]) == factors_list2$level1[n]) %>% select(factors_list2$factor2[n]) %>% minmax[[1]](.) # %>% as.character
          factors_list2$all_edible[n] <- current_val != extremum
-         factors_list2$level2[n] <- supinf(current_val, 2, 2)     # Round by excess or default, paste < or > on factors_list"2"$level"2"
+         factors_list2$level2[n] <- supinf(current_val, minmax, 2, 2)     # Add or substract margin, paste < or > on factors_list"2"$level"2"
       }
    else     # factor1 & factor2 are numbers
       {
-         minmax1 <- minmaxing(factors_list2$level1[n])
-         minmax2 <- minmaxing(factors_list2$level2[n])
+         minmax1 <- minmaxing(factors_list2$level1[n], margin)
+         minmax2 <- minmaxing(factors_list2$level2[n], margin)
          current_val1 <- training_set %>% filter(class == "poisonous") %>% select(factors_list2$factor1[n]) %>%  minmax1[[1]](.)
          extremum1 <- training_set %>%  select(factors_list2$factor1[n]) %>%  minmax1[[1]](.)
          current_val2 <- training_set %>% filter(class == "poisonous") %>% select(factors_list2$factor2[n]) %>%  minmax2[[1]](.)
          extremum2 <- training_set %>%  select(factors_list2$factor2[n]) %>%  minmax2[[1]](.)
          factors_list2$all_edible[n] <- current_val1 != extremum1 & current_val2 != extremum2
-         factors_list2$level1[n] <- supinf(current_val1, 2, 1)     # Round by excess or default, paste < or > on factors_list"2"$level"1"
-         factors_list2$level2[n] <- supinf(current_val2, 2, 2)     # Round by excess or default, paste < or > on factors_list"2"$level"2"
+         factors_list2$level1[n] <- supinf(current_val1, minmax, 2, 1)     # Add or substract margin, paste < or > on factors_list"2"$level"1"
+         factors_list2$level2[n] <- supinf(current_val2, minmax, 2, 2)     # Add or substract margin, paste < or > on factors_list"2"$level"2"
       }
    }
 }
@@ -273,7 +271,6 @@ rm(str_factors1, str_factors2f, str_factors2ff)    # Clear environment
 # Concatenate all factor/levels as one criteria string
 mono_criteria_list <- paste(single_criteria$factor, single_criteria$level, collapse = " | ")
 double_criteria_list <- paste("(", double_criteria$factor1, double_criteria$level1, "&", double_criteria$factor2, double_criteria$level2, ")",collapse = " | ")
-#bi_criteria_list <- double_criteria_list
 bi_criteria_list <- paste(mono_criteria_list, "|", double_criteria_list)
 
 # Create a prediction dataset, with boolean factors (meaning "is.edible") as .$reference
