@@ -187,7 +187,7 @@ minmaxing <- function(input_level, margin_value){
 # Define function : rounding + margin computation + add ">" or "<" before the value.
 infsup <- function(list_name, input_value, min_max, level_number, n_iter){
    level_value <- paste0(list_name, "$level", level_number, "[", n_iter, "]")  # Select factors_list, factors_list1 or factors_list2 .$levels
-   threshold <- input_value %>% round(., digits = 1) + min_max[[2]] %>% max(., 0) # Round, add or remove margin value, set to zero if negative
+   threshold <- input_value %>% round(., digits = 1) %>% + min_max[[2]] %>% max(., 0) # Round, add or remove margin value, set to zero if negative
    threshold %>% 
        paste0(eval(parse(text = level_value)), .) %>% # Paste "min" or "max" before rounded value
       str_replace_all(., "min", "< ") %>%       # Replace "min" by "< "
@@ -257,7 +257,7 @@ dual_crit_search <- function(input_list, margin_value){
    input_list
 }
 
-factors_list1 <- single_crit_search(factors_list1, 350)
+factors_list1 <- single_crit_search(factors_list1, 0.6)
 
 # Get relevant (i.e. edible-only) factors, data types and levels (criterion)
 factors_to_remove <- factors_list1 %>% filter(all_edible == TRUE, type %in% c("factor", "logical", "character")) %>% select(factor, level)
@@ -272,7 +272,7 @@ single_crit_index <- which(eval(parse(text = single_crit_removal)))  # Get all i
 factors_list2 <- factors_list2[-single_crit_index,]
 rm(one_crit1, one_crit2, single_crit_removal, single_crit_index)    # Clear environment
 
-factors_list2 <- dual_crit_search(factors_list2, 3521.2)
+factors_list2 <- dual_crit_search(factors_list2, 1.1)
 
 # Show relevant (i.e. edible-only) factors, data types and levels (criterion)
 relevant_factors1 <- factors_list1 %>% filter(all_edible == TRUE) %>% select(factor, level, type)
