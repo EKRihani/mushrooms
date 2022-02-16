@@ -83,15 +83,15 @@ knitr::write_bib(c("tidyverse", "rmarkdown", "knitr", "ggpubr"), "packages.bib")
 \paragraph*{}
 Mushroom identification is a difficult subject, that must **not** be taken lightly. The species of mushrooms one may encounter vary considerably from one ecosystem to another, from one continent to another, and no mushroom dataset or book can cover all the diversity of the fungal world.
 \paragraph*{}
-The dataset presented in this study, while being one of the most comprehensive mushrooms datasets in the data science area is by no means comprehensive. 
+The dataset presented in this study, while being one of the most comprehensive mushrooms datasets in the data science area, is by no means comprehensive. 
 \paragraph*{}
 Several genera are not present in this dataset, the most famous one probably being the *psylocybe* genre, known for its psychedelic properties. Several species are only mentioned by their common names, such as *destroying angel*, which may be used for several different species : *Amanita virosa*, *Amanita verna*, *Amanita bisporigera*, *Amanita ocreata*... Several famous species are missing, some of them toxic (*Rubroboletus satanas* or Satan's bolete), some of them delicious (*Amanita caesaria* or Caesar's mushroom) and easily confused with toxic ones (*Amanita muscaria* or fly agaric, which may lose its white spots, especially after strong rains), or the other way around (the entire *gyromitra* genre is missing, and can be confused with morels). 
 \paragraph*{}
 Some criteria may also vary wildly accordingly to the mushroom stage of maturity : while the green hats of mature *Amanita phalloides* (death caps) are easily recognizable, young specimens are white and can easily be confused with edible ones (such as specimens of the *Agaricus* genre).
 \paragraph*{}
-Some of these mushrooms are **deadly**, even when eaten in very small amounts. Mushroom poisoning diagnosis can be quite difficult, and often made to late to really act accordingly. Toxic compounds such as amanitins cannot be altered or destroyed by cooking or freezing, and will be absorbed by the intestine, pass into the bloodstream to then filtered by the liver, destroying the liver cells, and then being excreted in the intestines, to be reabsorded, filtered again... each pass destroying the remaining liver cells, in a cycle known as hepato-enteric reabsorption.
+Some of these mushrooms are *deadly*, even when eaten in very small amounts. Mushroom poisoning diagnosis can be quite difficult, and often made to late to really act accordingly. Toxic compounds such as amanitins cannot be altered or destroyed by cooking or freezing, and will be absorbed by the intestine, pass into the bloodstream to then be filtered by the liver, destroying the liver cells, and then being excreted in the intestines, to be reabsorded, filtered again... each pass destroying the liver cells that survived the previous one, in a cycle known as hepato-enteric reabsorption.
 \paragraph*{}
-Do not, **under any circumstances**, use this kind of dataset to determine if a mushroom is edible or not.
+Do not, *under any circumstances*, use this kind of dataset to determine if a mushroom is edible or not.
 
 \subsection{Goal of the study}
 \paragraph*{}
@@ -99,17 +99,17 @@ Mushroom and plants identification is a classic classification problem, which is
 \paragraph*{}
 The first limit is the number of missing links. Some species have obviously become extinct, which means some of the branches and nodes of the phylogenetic tree are missing, which can complicate the analysis when two related species have a lot of missing common branches and nodes. Some similarities between species can also be missed.
 \paragraph*{}
-The second, and deeper limit is the inherent logic of the evolutionary process. Two antagonist phenomenons are at stake : evolutionary divergence and convergence. Both phenomenons are lined to the necessary adaptation of species to their environment. The evolutionary divergence explains the diversity of mammals : bats, whales and horses look very different because they have adapted to very different environments. The evolutionary convergence explains the similarity between the wing of a bat and the wing of the bee. However, despite their apparent dissimilarity, the wing of the bat is closer to the human hand than it is from the wing of the bee. The most reliable way to assess the evolutionary process and accurately find links between species is to analyze their genomes : visible characteristics can sometimes be very misleading. However, these characteristics often are the only ones available.
+The second, and deeper limit is the inherent logic of the evolutionary process. Two antagonist phenomenons are at stake : evolutionary divergence and convergence. Both phenomenons are linked to the necessary adaptation of species to their environment. The evolutionary divergence explains the diversity of mammals : bats, whales and horses are related, but look very different because they have adapted to very different environments. The evolutionary convergence explains the similarity between the wing of a bat and the wing of the bee. However, despite their apparent dissimilarity, the wing of the bat is closer to the human hand or the whale's fin than it is from the wing of the bee. The most reliable way to assess the evolutionary process and accurately find links between species is to analyze their genomes : visible characteristics can sometimes be very misleading. However, these characteristics often are the only ones available.
 \paragraph*{}
-The third problem is the primary endpoint of the classification. This endpoint may or may not be linked to the evolutionary process or the visible criteria, especially if this endpoint is vague. Our "not edible" endpoint lies in this category, for several reasons : it is mostly centered on human-only toxicity, many very different toxicity mechanisms can exist and the toxicity or non-toxicity of a fungic or vegetal metabolite can be linked to very tenuous modifications from one specie to another.
+The third problem is the primary endpoint of the classification. This endpoint may or may not be linked to the evolutionary process or the visible criteria, especially if this endpoint is vague. The endpoint of this study (edibility) lies in this category, for several reasons : it is mostly centered on human-only toxicity, many different toxicity mechanisms can exist, and the toxicity or non-toxicity of a fungic or vegetal metabolite can be linked to very tenuous metabolic modifications from one species to another.
 \paragraph*{}
-For these reasons among others, the tree-based logic, while commonly used in mushrooms and plants identification, and allegedly justified by the tree-based evolutionary process, may not necessarily be the most optimal approach to species classification based on visual criteria. The aim of this study is to perform this classification task based on limited visual cues, and to assess the performance of several classification strategies.
+For these reasons among others, the tree-based logic, while commonly used in mushrooms and plants identification, and allegedly justified by the tree-based evolutionary process, may not necessarily be the most optimal approach to species classification based on visual criteria. The aim of this study is to perform this classification task based on limited visual cues, and to assess the performance of different classification strategies.
 \subsection{The dataset}
 \paragraph*{}
 The Secondary Mushroom Identification Dataset was submitted by Dennis Wagner in 2021[@mushroom2][@mushroom2b], and is inspired by the Mushroom Dataset created by Jeff Schlimmer in 1987[@mushroom1][@mushroom1b]. Both datasets aim to create a fictional collection of mushrooms, built by gathering characteristics about a selected number of mushroom species, then randomizing each individual mushroom quantitative variables along the species typical characteristics (i.e. cap diameter, stem  height, stem width).  
 \paragraph*{}
 This dataset contains the data from n = `r summary_number` mushrooms (rows). Each mushroom has `r nrow(structure_dataset)` attributes (columns) :
-\paragraph*{}
+
 * *Class* : edible (e) or poisonous (p)
 * *Cap diameter* : in centimeters
 * *Cap shape* : bell (b), conical (c), convex (x), flat (f), sunken (s), spherical (p) or other (o)
@@ -146,7 +146,7 @@ The code, benchmarks and report were run on the following computer configuration
 * Packages : tidyverse[@R-tidyverse] (v1.3.1), ggrepel[@R-ggrepel] (v0.9.1), ggpubr[@R-ggpubr] (v0.4.0), rmarkdown[@R-rmarkdown] (v2.11), knitr[@R-knitr] (v1.34).
 
 \paragraph*{}
-The code was also tested on a Windows 7 x64 SP1 computer with 16 GB RAM, and R 4.1.0. It was not tested on any Mac OS system.
+The code was also tested on a Windows 7 x64 computer with 16 GB RAM, and R 4.1.0. It was not tested on any Mac OS system.
 \subsection{Data preparation and cleaning}
 \paragraph*{}
 The dataset is directly downloaded from the UCI database in zip format and unzipped. The archive contains four files :
@@ -238,9 +238,11 @@ plot(ggarrange(
 \paragraph*{}
 Differences in the distribution of edible and non edible species can already be seen, and these variations may be used to classify species.
 \paragraph*{}
-Our classification strategy is based on one rule : the specificity on the edibility criterion must be equal to 1, false negative are not tolerated. In layman's terms, a good algorithm should never classify a poisonous mushroom as edible.
-\paragraph*{}
-Given this constraint, a "stupid" algorithm can be designed as a benchmark. This algorithm will simply classify all mushrooms as poisonous.
+Our classification strategy is based on one rule : the specificity on the edibility criterion must be equal to 1, false negative are not tolerated. In layman's terms, a good algorithm may reject edible mushrooms but should **never** classify a poisonous one as edible.
+
+\subsubsection{Single and dual criteria analysis}  
+
+Given the above constraint, a "stupid" algorithm can be designed as a benchmark. This algorithm will simply classify all mushrooms as poisonous, by setting all edibility values to FALSE.
 \paragraph*{}
 A slightly more elaborate algorithm will classify mushrooms as edible if they meet one criterion. For example, in the distributions showed above, the mushroom will be edible if *cap.diameter* > 40, if *spore.print.color* = gray or if *veil.color* = yellow.
 
@@ -248,8 +250,19 @@ A slightly more elaborate algorithm will classify mushrooms as edible if they me
 
 kable(CM_stupid["table"], caption = "Confusion Matrix for stupid classifier")
 ```
+\paragraph*{}
+An even more elaborate algorithm can be elaborated with two factors and will for example, classify a mushroom as edible if *cap.shape* = convex & *cap.surface* = leathery.
+\paragraph*{}
+The building of this more elaborate model will be discussed here, since the single-criterion one is very similar and can be seen as a simplified version of the two-criteria model.
+\paragraph*{}
+The very first step was to build the criteria list. All unique *factor* and *logical*  types variables were gathered (with *level* value). The same operation was performed on *numeric* type values, which were then duplicated for *min* and *max* levels. The two datalists were then merged, and joined with a datalist that contained all *type* characteristics of each variable.
+\paragraph*{}
+The building of a comprehensive -- but not redundant -- 2-criteria list is a four step process :
 
-
+1. Create a 2-index list with the *ncomb* function, which eliminates potential duplicates because of the commutative properties of the AND operator, i.e. (n,p) indices are equivalent to (p,n) ;
+2. Take each column to build the corresponding half-sized dataset and merge the two halves 
+3. Remove all single-criterion combinations, i.e all (n,n) indices 
+4. Set the edibility criterion to FALSE by default.
 
 \newpage
 \section{Results}

@@ -16,11 +16,10 @@ library(GGally)      # Correlation plots (pairs)
 # Get, decompress, import data file
 datafile <- tempfile()
 download.file("https://archive.ics.uci.edu/ml/machine-learning-databases/00615/MushroomDataset.zip", datafile)
-#datafile <- "~/projects/mushrooms/MushroomDataset.zip"    # Fichier local, A ENLEVER
 datafile <- unzip(datafile, "MushroomDataset/secondary_data.csv")
 dataset <- read.csv(datafile, header = TRUE, sep = ";")
 
-
+rm(datafile)      # Clean environment
 
 ################################
 #  DATA FORMATTING / CLEANING  #
@@ -67,7 +66,7 @@ structure_dataset <- data.frame(cbind(structure_initial, structure_uniques, stru
 colnames(structure_dataset) <- c("Initial", "Levels", "Final")
 structure_dataset$Levels <- as.numeric(structure_dataset$Levels)
 
-
+rm(unique_length, data_missing_f)      # Clean environment
 
 ##################################
 #     INTRODUCTORY ANALYSIS      #
@@ -84,9 +83,9 @@ summary_dataset <- summary(dataset) # Basic summary of all categories
 
 # Distribution plots for numeric/integer parameters
 dataset_names <-row.names(structure_dataset)
-l <- nrow(structure_dataset)
 
 # Plot all monovariate distributions of the entire dataset
+l <- nrow(structure_dataset)
 for (n in 1:l){
    plot_title <- paste("Mushroom", dataset_names[n], "distribution")
    plot <- dataset %>%
@@ -114,7 +113,6 @@ set.seed(1, sample.kind="Rounding")
 test_index <- createDataPartition(y = dataset$cap.diameter, times = 1, p = 0.1, list = FALSE)
 trainvalid_set <- dataset[-test_index,]
 evaluation_set <- dataset[test_index,]
-rm(dataset)          # Clean environment
 
 plot_bar(trainvalid_set, by = "class")
 
@@ -124,61 +122,56 @@ test_index <- createDataPartition(y = trainvalid_set$cap.diameter, times = 1, p 
 training_set <- trainvalid_set[-test_index,]
 validation_set <- trainvalid_set[test_index,]
 
+rm(dataset, test_index)          # Clean environment
 
 
 ########################################################
 #     SIMPLE CLASSIFICATION MODEL : CRITERIA LISTS     #
 ########################################################
 
-# Create criteria lists for simple classification
-factors_list <- training_set %>% select_if(is.factor) %>% gather(factor, level) %>% unique() %>% select(factor, level) %>% filter(factor != "class")
-
+# Create criteria lists (factor + type + values) for simple classification
+factors_list <- training_set %>% select(where(is.factor) | where(is.logical)) %>% gather(factor, level) %>% unique() %>% select(factor, level) %>% filter(factor != "class")  # Get all factor|logical levels
 factors_type <- training_set %>% summary.default %>% as.data.frame %>% group_by(Var1) %>% spread(Var2, Freq) %>% as.data.frame   # Get training_set structure
 factors_type$Class <- if_else(factors_type$Class == "-none-", factors_type$Mode, factors_type$Class)     # Create coherent Class column
 factors_type <- factors_type %>% select(-Mode, -Length)              # Clean factors_type
 colnames(factors_type) <- c("factor", "type")
 
-add_factorsL <- factors_type %>% 
-   filter(type == "logical") %>% 
-   slice(rep(1:n(), each = 2)) %>%                          # Duplicate each logical factor
-   mutate(level = rep(c("TRUE", "FALSE"), times = n()/2))   # Create TRUE/FALSE for each logical factor
-add_factorsN <- factors_type %>% filter(type == "numeric") %>% 
+numeric_list <- factors_type %>% 
+   filter(type == "numeric") %>% select(factor) %>%         # Select numeric values, get only factor name
    slice(rep(1:n(), each = 2)) %>%                          # Duplicate each numeric factor
-   mutate(level = rep(c("min", "max"), times = n()/2))      # Create min/max for each numeric factor
+   mutate(level = rep(c("min", "max"), times = n()/2))      # Create min and max values for each numeric factor
 
-factors_list <- left_join(factors_list, factors_type)
-factors_list <- rbind(factors_list, add_factorsL, add_factorsN)
-rm(add_factorsL, add_factorsN)                  # Clear environment
+factors_list <- rbind(factors_list, numeric_list)           # Merge factor|logical and numeric lists
+factors_list <- left_join(factors_list, factors_type)       # Add relevant type to each factor
 
 # Build factors list for 1 variable analysis
 factors_list1 <- factors_list
-factors_list1$all_edible <- FALSE               # Set as poisonous by default
-comment(factors_list1) <- "factors_list1"       # Add the dataframe name as comment, to be used in function.
+factors_list1$all_edible <- FALSE                  # Set as poisonous by default
+comment(factors_list1) <- "factors_list1"          # Add the dataframe name as comment, to be used in function.
 
 # Build factors list for 2 variables analysis
 m <- nrow(factors_list)
-index_list2 <- t(combn(m, 2))                         # Create all combinations of 2 numbers from 1 to m (indices)
-half1_list2 <- factors_list[index_list2[,1],]         # Get 1st attribute, according to 1st index
+index_list2 <- t(combn(m, 2))                            # Create all combinations of 2 numbers from 1 to m (indices)
+half1_list2 <- factors_list[index_list2[,1],]            # Get 1st attribute, according to 1st index
 colnames(half1_list2) <- c("factor1", "level1", "type1")
-half2_list2 <- factors_list[index_list2[,2],]         # Get 2nd attribute, according to 2nd index
+half2_list2 <- factors_list[index_list2[,2],]            # Get 2nd attribute, according to 2nd index
 colnames(half2_list2) <- c("factor2", "level2", "type2")
 factors_list2 <- cbind(half1_list2, half2_list2)
-factors_list2 <- factors_list2 %>% filter(factor1 != factor2)        # Remove duplicates
-factors_list2$all_edible <- FALSE                     # Set as poisonous by default
-comment(factors_list2) <- "factors_list2"             # Add the dataframe name as comment, to be used in function.
-rm(half1_list2, half2_list2, index_list2)             # Clear environment
+factors_list2 <- factors_list2 %>% filter(factor1 != factor2)     # Remove duplicates
+factors_list2$all_edible <- FALSE                        # Set as poisonous by default
+comment(factors_list2) <- "factors_list2"                # Add the dataframe name as comment, to be used in function
 
+rm(numeric_list, half1_list2, half2_list2, index_list2)           # Clean environment
 
 
 ########################################################
 #     SIMPLE CLASSIFICATION MODEL : MODEL BUILDING     #
 ########################################################
 
-#Check factors_list2 structure : in theory, by construction, there should be NO text factor2 + numeric factor1
+# Check factors_list2 structure : in theory, by construction, there should be NO text factor2 + numeric factor1
 factors_check <- factors_list2 %>% filter(type2  %in% c("logical", "factor", "character"), type1 %in% c("integer", "numeric")) %>% nrow
 
-
-#Define function : min/max and +/- margin selection
+# Define function : min/max and +/- margin selection
 minmaxing <- function(input_level, margin_value){
    margin <- as.numeric(as.character(recode_factor(input_level, min = -margin_value, max = margin_value))) # Set +/- margin according to max or min
    c(match.fun(input_level), margin)               # Set vector with min/max (function) in [[1]] and +/- margin (numeric) in [[2]]
@@ -187,11 +180,13 @@ minmaxing <- function(input_level, margin_value){
 # Define function : rounding + margin computation + add ">" or "<" before the value.
 infsup <- function(list_name, input_value, min_max, level_number, n_iter){
    level_value <- paste0(list_name, "$level", level_number, "[", n_iter, "]")  # Select factors_list, factors_list1 or factors_list2 .$levels
-   threshold <- input_value %>% round(., digits = 1) %>% + min_max[[2]] %>% max(., 0) # Round, add or remove margin value, set to zero if negative
-   threshold %>% 
-       paste0(eval(parse(text = level_value)), .) %>% # Paste "min" or "max" before rounded value
-      str_replace_all(., "min", "< ") %>%       # Replace "min" by "< "
-      str_replace_all(., "max", "> ")           # Replace "max" by "> "
+   input_value %>% 
+      round(., digits = 1) %>% 
+      + min_max[[2]] %>% 
+      max(., 0) %>% # Round, add or remove margin value, set to zero if negative
+     paste0(eval(parse(text = level_value)), .) %>% # Paste "min" or "max" before rounded value
+    str_replace_all(., "min", "< ") %>%       # Replace "min" by "< "
+    str_replace_all(., "max", "> ")           # Replace "max" by "> "
 }
 
 # Define function : find all "edible-only" criteria
@@ -296,7 +291,7 @@ bi_criteria_list <- paste(mono_criteria_list, "|", double_criteria_list)
 predictions <- validation_set
 predictions$reference <- as.logical(as.character(recode_factor(predictions$class, edible = TRUE, poisonous = FALSE))) # Switch to logical values
 
-# Apply the three predictive models : stupid , single-criteron, double-criteria
+# Apply the three predictive models : stupid , single-criterion, double-criteria
 predictions$stupid_predict = FALSE   # Consider all mushrooms as poisonous
 predictions <- predictions %>% mutate(mono_predict = eval(parse(text = mono_criteria_list)))
 predictions <- predictions %>% mutate(bi_predict = eval(parse(text = bi_criteria_list)))
@@ -316,7 +311,9 @@ CM_monocrit["byClass"]
 CM_bicrit["byClass"]
 CM_monocrit["table"]
 CM_bicrit["table"]
-predictions %>% filter (reference == FALSE & bi_predict == TRUE)
+#predictions %>% filter (reference == FALSE & bi_predict == TRUE)
+
+
 
 #############################################
 #     DESCRIPTIVE TRAINING SET ANALYSIS     #
@@ -343,7 +340,7 @@ for (n in 2:l){    # Column 1 (class) isn't plotted since it's the fill attribut
    assign(plotname, plot)     # Assign the plot to the train_distrib_colname name
    rm(plot)    # Clear environment
 }
-''
+
 # For bivariate analysis : reduced dataset factor names list (<= 6 levels or numeric)
 structure_dataset_reduced <- structure_dataset %>% filter(Levels <= 6 | Final == "numeric")
 dataset_reduced_names <-  rownames(structure_dataset_reduced)
@@ -406,6 +403,12 @@ fit_test("LogitBoost")
 #qda_fitting <- train(class ~ ., method = "qda", data = training_set)
 #qda_prediction <- predict(qda_fitting, validation_set, type = "raw")
 #confusionMatrix(qda_prediction, validation_set$class)$overall[["Accuracy"]]
+
+# Modèles :
+# Tree: rpart2, rpartCost, ctree, ctree2
+# Random Forest: rfern, ranger, Rborist
+# Discriminant Analysis : pda, lda,
+# Generalized Additive Model : gamLoess
 
 #fitting <- train(class ~ ., method = "rpart", tuneGrid  = data.frame(cp = seq(0.005, 0.015, len = 20)), data = training_set)
 fitting <- train(class ~ ., method = "rpart", data = training_set, tuneGrid=data.frame(cp = .012))
