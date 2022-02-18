@@ -5,6 +5,7 @@ date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
   pdf_document:
     number_sections: true   # Add section numbering
+    extra_dependencies: ["float"]
     toc: true
     toc_depth: 3
 
@@ -73,7 +74,7 @@ library(ggpubr)   # Combine plots (ggarrange)
 library(rmarkdown)
 library(knitr)
 library(tidyverse)
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, fig.pos = "!H")
 knitr::write_bib(c("tidyverse", "rmarkdown", "knitr", "ggpubr"), "packages.bib")
 #knitr::write_bib(c("tidyverse", "caret", "data.table", "reshape2", "ggplot2", "ggrepel", "recommenderlab", "stringr", "ggpubr", "rmarkdown", "knitr"), "packages.bib")
 ```
@@ -173,7 +174,7 @@ Firstly, the *stem.root = f* value isn't explained. Since most *f* values for th
 kable(uniques_missing_f, caption = "Unique values for stem.root = 'f'")
 ```
 \paragraph*{}
-Secondly, the *cap.surface = d* value isn't explain either. There was no workaround to lift this uncertainty except from performing some searches : digging into the primary dataset, finding all the mushrooms that may have the value *cap.surface = d*, translating the common english name into the scientific (latin) ones and finding the relevant descriptions in mycology books.[@courtecuisse]
+Secondly, the *cap.surface = d* value isn't explained either. There was no workaround to lift this uncertainty except from performing some searches : digging into the primary dataset, finding all the mushrooms that may have the value *cap.surface = d*, translating the common english name into the scientific (latin) ones and finding the relevant descriptions in mycology books.[@courtecuisse]
 \paragraph*{}
 This research showed all these mushrooms to have a velvety, or downy surface. A value d = downy was thus assumed.
 \paragraph*{}
@@ -240,16 +241,11 @@ Differences in the distribution of edible and non edible species can already be 
 \paragraph*{}
 Our classification strategy is based on one rule : the specificity on the edibility criterion must be equal to 1, false negative are not tolerated. In layman's terms, a good algorithm may reject edible mushrooms but should **never** classify a poisonous one as edible.
 
-\subsubsection{Single and dual criteria analysis}  
+\subsubsection{Single and dual criteria classifier}  
 
 Given the above constraint, a "stupid" algorithm can be designed as a benchmark. This algorithm will simply classify all mushrooms as poisonous, by setting all edibility values to FALSE.
 \paragraph*{}
-A slightly more elaborate algorithm will classify mushrooms as edible if they meet one criterion. For example, in the distributions showed above, the mushroom will be edible if *cap.diameter* > 40, if *spore.print.color* = gray or if *veil.color* = yellow.
-
-```{r out.width = "90%", echo = FALSE}
-
-kable(CM_stupid["table"], caption = "Confusion Matrix for stupid classifier")
-```
+A slightly more elaborate algorithm will classify mushrooms as edible if they meet one criterion. For example, in the distributions showed above, the mushroom should be edible if *cap.diameter* > 40, if *spore.print.color* = gray or if *veil.color* = yellow.
 \paragraph*{}
 An even more elaborate algorithm can be elaborated with two factors and will for example, classify a mushroom as edible if *cap.shape* = convex & *cap.surface* = leathery.
 \paragraph*{}
@@ -260,9 +256,66 @@ The very first step was to build the criteria list. All unique *factor* and *log
 The building of a comprehensive -- but not redundant -- 2-criteria list is a four step process :
 
 1. Create a 2-index list with the *ncomb* function, which eliminates potential duplicates because of the commutative properties of the AND operator, i.e. (n,p) indices are equivalent to (p,n) ;
-2. Take each column to build the corresponding half-sized dataset and merge the two halves 
-3. Remove all single-criterion combinations, i.e all (n,n) indices 
+2. Take each column to build the corresponding half-sized dataset and merge the two halves ;
+3. Remove all single-criterion combinations, i.e all (n,n) indices ;
 4. Set the edibility criterion to FALSE by default.
+\paragraph*{}
+All criteria combinations are then evaluated. The first step of this evaluation is to detect the characteristic type. All mushroom characteristics fall into one of two *lato sensu* categories : "text" (i.e. character, factor or logical) or "numbers" (i.e. integer or numeric). With a two-criteria classifier, these two types should create four combinations :
+
+* Criterion 1 is text, criterion 2 is numeric ;
+* Criterion 1 is text, criterion 2 is text ;
+* Criterion 1 is numeric, criterion 2 is numeric ;
+* Criterion 1 is numeric, criterion 2 is text.
+
+However, by construction, the fourth combination does not exist, which somewhat simplifies the evaluation function. This is a consequence of the use of *ncomb* function and the placement of all numeric factors were placed at the bottom of the criterion list, and this property can be illustrated by :
+```{r}
+factors_list2 %>% 
+  filter(type2 %in% c("logical", "factor", "character"), 
+         type1 %in% c("integer", "numeric")) %>% 
+  nrow
+```  
+\paragraph*{}
+After the type identification and a filtering step on the two relevant criterias, the basic classification strategy is as follows :
+
+* Text + text : count all occurrences, count all poisonous occurrences. If there are mushrooms, but none is poisonous, consider all of them as edible.
+* Text + numeric : compute min (or max, resp.) on all occurrences, and on all poisonous occurrences. If the values differ, consider all values below (or above, resp.) the poisonous occurences to be all edible. Apply a settable safety margin.
+* Numeric + numeric : compute the two min (or max, resp.) on each criteria, on all occurrences and on all poisonous occurences. If the values differ on each dimension, consider all values below (or above, resp.) the poisonous occurences to be all edible. Apply a settable safety margin on each dimension.
+
+The min/max detection is very simply based on the "min" or "max" string found in *factors_listX$typeY*. A *match.fun* function converts the "min" or "max" string into a *min* or *max* function, a *recode.factor* function was used to select the sign (+/-) of the margin. The "min" or "max" string was then concatenated to the computed numeric value, and converted into a > or < symbol, to be used in the evaluation step.
+\paragraph*{}
+
+```{r out.width = "90%", echo = FALSE}
+
+kable(head(relevant_factors2, 15), caption = "15 first relevant factors of the two-criteria classifier")
+```
+
+This list will serve as a basis to create a criterion list that merges all criteria two by two (for a two-criteria model) with AND operators, then merges all the pairs together with OR operators. The resulting string is simply evaluated against the validation set with a mutate function : if one criteria is met, the predicted edibility is set to TRUE, if not, it is set to FALSE.
+\paragraph*{}
+The predicted edibility is then compared to the real edibility value.
+\paragraph*{}
+By construction, the stupid classifier has *Sensitivity =* `r CM_stupid$byClass["Sensitivity"]` and *Specificity = * `r CM_stupid$byClass["Specificity"]`. The relatively good accuracy score (*Accuracy =* `r round(CM_stupid$overall["Accuracy"], 3)`) is indeed misleading, this model actually performs extremely poorly, with a F1 value that cannot be computed by the *confusionMatrix* function, since this model didn't classify correctly any of the edible mushrooms.
+```{r out.width = "90%", echo = FALSE}
+
+kable(CM_stupid$table, caption = "Confusion Matrix for stupid classifier")
+```
+
+\paragraph*{}
+The single-criterion classifier performance was only marginally better than the stupid classifier's, and achieved *Sens. =* `r round(CM_monocrit$byClass["Sensitivity"], 3)` and *Spec. =* `r round(CM_monocrit$byClass["Specificity"], 3)` for a safety margin set at $m_{2} =$ `r margin1`. The F1 value was poor : *F1 =* `r round(CM_monocrit$byClass["F1"] , 3)`. Of the `r sum(CM_monocrit$table[,2])` edible specimen in the validation set, only `r sum(CM_monocrit$table[2,2])` were recognized as such.
+```{r out.width = "90%", echo = FALSE}
+
+kable(CM_monocrit$table, caption = "Confusion Matrix for single-criterion classifier")
+```
+\paragraph*{}
+Given the poor performance of the single-criterion classifier, the performance of the dual-criteria classifier were quite surprising. With a safety margin set at $m_{2} =$ `r margin2`, this model managed to attain *Sens. =* `r round(CM_bicrit$byClass["Sensitivity"], 3)`, 
+*Spec. =* `r round(CM_bicrit$byClass["Specificity"], 3)`, and 
+*F1 =* `r round(CM_bicrit$byClass["F1"],3)`. Of the `r sum(CM_bicrit$table[,2])` edible specimen of the validation set, `r CM_bicrit$table[2,2]` were identified correctly.
+
+```{r out.width = "90%", echo = FALSE}
+
+kable(CM_bicrit$table, caption = "Confusion Matrix for dual-criteria classifier")
+```
+\paragraph*{}
+The single-criterion and dual-criteria safety margins ($m_{1}$ and $m_{2}$) are two hyperparameters that can be tuned to give optimal results. As said in the previous section, the endpoint is not an optimum on the ROC curve, but rather the highest achievable sensivity for $specificity = 1$.
 
 \newpage
 \section{Results}

@@ -8,10 +8,10 @@ if(!require(caret)) install.packages("caret", repos = "http://cran.us.r-project.
 
 # Load required libraries
 library(tidyverse)      # Set of packages used in everyday data analyses
-library(caret)      # Set of packages for machine learning
+library(caret)          # Set of packages for machine learning
 library(DataExplorer)   # For exploratory analysis
-library(RColorBrewer)     # ggplot2 palettes
-library(GGally)      # Correlation plots (pairs)
+#library(RColorBrewer)   # ggplot2 palettes
+library(GGally)         # Correlation plots (pairs)
 
 # Get, decompress, import data file
 datafile <- tempfile()
@@ -26,9 +26,9 @@ rm(datafile)      # Clean environment
 ################################
 
 # Get initial dataset structure informations
-structure_initial <- sapply(X = dataset, FUN = class, simplify = TRUE) # Get all initial dataset variables classes
-unique_length <- function (x) {length(unique(x))}  # Define function : count levels of a variable
-structure_uniques <- sapply(dataset, FUN = unique_length) # Count levels of all dataset variables
+structure_initial <- sapply(X = dataset, FUN = class, simplify = TRUE)  # Get all initial dataset variables classes
+unique_length <- function (x) {length(unique(x))}                       # Define function : count levels of a variable
+structure_uniques <- sapply(dataset, FUN = unique_length)               # Count levels of all dataset variables
 
 
 # What is "stem.root = f" ? The metadata doesn't indicate it, let's find out...
@@ -59,7 +59,7 @@ dataset$has.ring <- as.logical(as.character(recode_factor(dataset$has.ring, t = 
 head(dataset)
 
 # Get final dataset structure information
-structure_final <- sapply(X = dataset, FUN = class, simplify = TRUE) # Get all final dataset variables classes
+structure_final <- sapply(X = dataset, FUN = class, simplify = TRUE)    # Get all final dataset variables classes
 
 # Merge initial and final dataset structure information
 structure_dataset <- data.frame(cbind(structure_initial, structure_uniques, structure_final))
@@ -72,10 +72,10 @@ rm(unique_length, data_missing_f)      # Clean environment
 #     INTRODUCTORY ANALYSIS      #
 ##################################
 
-# Exploratory analysis with DataExplorer https://cran.r-project.org/web/packages/DataExplorer/vignettes/dataexplorer-intro.html
+# Exploratory analysis with DataExplorer        https://cran.r-project.org/web/packages/DataExplorer/vignettes/dataexplorer-intro.html
 plot_str(dataset)
 plot_bar(dataset)
-# Avec summarytools ? https://cran.r-project.org/web/packages/summarytools/vignettes/introduction.html
+#### Avec summarytools ?      https://cran.r-project.org/web/packages/summarytools/vignettes/introduction.html
 
 # Introductory summaries
 summary_number <- nrow(dataset)  # Mushroom count
@@ -169,7 +169,7 @@ rm(numeric_list, half1_list2, half2_list2, index_list2)           # Clean enviro
 ########################################################
 
 # Check factors_list2 structure : in theory, by construction, there should be NO text factor2 + numeric factor1
-factors_check <- factors_list2 %>% filter(type2  %in% c("logical", "factor", "character"), type1 %in% c("integer", "numeric")) %>% nrow
+factors_check <- factors_list2 %>% filter(type2 %in% c("logical", "factor", "character"), type1 %in% c("integer", "numeric")) %>% nrow
 
 # Define function : min/max and +/- margin selection
 minmaxing <- function(input_level, margin_value){
@@ -251,8 +251,8 @@ dual_crit_search <- function(input_list, margin_value){
    }
    input_list
 }
-
-factors_list1 <- single_crit_search(factors_list1, 0.6)
+margin1 <- 1.0
+factors_list1 <- single_crit_search(factors_list1, margin1)
 
 # Get relevant (i.e. edible-only) factors, data types and levels (criterion)
 factors_to_remove <- factors_list1 %>% filter(all_edible == TRUE, type %in% c("factor", "logical", "character")) %>% select(factor, level)
@@ -267,7 +267,8 @@ single_crit_index <- which(eval(parse(text = single_crit_removal)))  # Get all i
 factors_list2 <- factors_list2[-single_crit_index,]
 rm(one_crit1, one_crit2, single_crit_removal, single_crit_index)    # Clear environment
 
-factors_list2 <- dual_crit_search(factors_list2, 1.1)
+margin2 <- 1.1
+factors_list2 <- dual_crit_search(factors_list2, margin2)
 
 # Show relevant (i.e. edible-only) factors, data types and levels (criterion)
 relevant_factors1 <- factors_list1 %>% filter(all_edible == TRUE) %>% select(factor, level, type)
@@ -307,10 +308,10 @@ CM_stupid <- confusionMatrix(data = predictions$stupid_predict, reference = pred
 CM_monocrit <- confusionMatrix(data = predictions$mono_predict, reference = predictions$reference, positive = "TRUE")
 CM_bicrit <- confusionMatrix(data = predictions$bi_predict, reference = predictions$reference, positive = "TRUE")
 
-CM_monocrit["byClass"]
-CM_bicrit["byClass"]
-CM_monocrit["table"]
-CM_bicrit["table"]
+CM_monocrit$byClass
+CM_bicrit$byClass
+CM_monocrit$table
+CM_bicrit$table
 #predictions %>% filter (reference == FALSE & bi_predict == TRUE)
 
 
@@ -386,19 +387,31 @@ pair_plots <- ggpairs(
 ###################################################
 
 #https://topepo.github.io/caret/available-models.html
-fit_test <- function(fit_model){
-start_time <- Sys.time()   # A SUPPRIMER
-fitting <- NULL
-prediction <- NULL
-accuracy <- NULL
-fitting <- train(class ~ ., method = fit_model, data = training_set) # REMPLACER fit_model par "le_modèle" + ajouter paramètres...
-prediction <- predict(fitting, validation_set, type = "raw")
-accuracy <- confusionMatrix(prediction, validation_set$class)$overall[["Accuracy"]]
-end_time <- Sys.time()  # A SUPPRIMER
-time <- difftime(end_time, start_time, units = "secs")  # A SUPPRIMER
-c(accuracy, time)
+# fit_test <- function(fit_model){
+# start_time <- Sys.time()   # A SUPPRIMER
+# fitting <- NULL
+# prediction <- NULL
+# accuracy <- NULL
+# fitting <- train(class ~ ., method = fit_model, data = training_set) # REMPLACER fit_model par "le_modèle" + ajouter paramètres...
+# prediction <- predict(fitting, validation_set, type = "raw")
+# accuracy <- confusionMatrix(prediction, validation_set$class)$overall[["Accuracy"]]
+# end_time <- Sys.time()  # A SUPPRIMER
+# time <- difftime(end_time, start_time, units = "secs")  # A SUPPRIMER
+# c(accuracy, time)
+# }
+
+
+
+fit_test <- function(fit_model, parameters){
+   fitting <- NULL
+   prediction <- NULL
+   accuracy <- NULL
+   fitting <- train(class ~ ., method = fit_model, data = training_set) # REMPLACER fit_model par "le_modèle" + ajouter paramètres...
+   prediction <- predict(fitting, validation_set, type = "raw")
+   accuracy <- confusionMatrix(prediction, validation_set$class)$overall[["Accuracy"]]
+   accuracy
 }
-fit_test("LogitBoost")
+fit_test("LogitBoost", "")
 
 #qda_fitting <- train(class ~ ., method = "qda", data = training_set)
 #qda_prediction <- predict(qda_fitting, validation_set, type = "raw")
