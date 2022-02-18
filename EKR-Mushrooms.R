@@ -19,7 +19,7 @@ download.file("https://archive.ics.uci.edu/ml/machine-learning-databases/00615/M
 datafile <- unzip(datafile, "MushroomDataset/secondary_data.csv")
 dataset <- read.csv(datafile, header = TRUE, sep = ";")
 
-rm(datafile)      # Clean environment
+#rm(datafile)      # Clean environment
 
 ################################
 #  DATA FORMATTING / CLEANING  #
@@ -66,7 +66,7 @@ structure_dataset <- data.frame(cbind(structure_initial, structure_uniques, stru
 colnames(structure_dataset) <- c("Initial", "Levels", "Final")
 structure_dataset$Levels <- as.numeric(structure_dataset$Levels)
 
-rm(unique_length, data_missing_f)      # Clean environment
+#rm(unique_length, data_missing_f)      # Clean environment
 
 ##################################
 #     INTRODUCTORY ANALYSIS      #
@@ -84,29 +84,10 @@ summary_dataset <- summary(dataset) # Basic summary of all categories
 # Distribution plots for numeric/integer parameters
 dataset_names <-row.names(structure_dataset)
 
-# Plot all monovariate distributions of the entire dataset
-l <- nrow(structure_dataset)
-for (n in 1:l){
-   plot_title <- paste("Mushroom", dataset_names[n], "distribution")
-   plot <- dataset %>%
-      ggplot(aes_string(x = dataset_names[n])) + #aes_string allows use of string instead of variable name
-      ggtitle(plot_title) +
-      ylab("") +
-      xlab(dataset_names[n]) +
-      theme_bw()
-   if(structure_dataset$Final[n] %in% c("integer", "numeric")) # Histogram for integer/numeric, Barplot for character/factors/logical
-   {plot <- plot + geom_histogram(fill = "gray45")}
-   else
-   {plot <- plot + geom_bar(fill = "gray45")}
-   plotname <- paste0("study_distrib_", dataset_names[n])   # Concatenate "plot_distrib" with the column name
-   assign(plotname, plot)     # Assign the plot to the plot_distrib_colname name
-}
 
-
-
-##########################################################
-#     TRAINING, VALIDATION, EVALUATION SETS CREATION     #
-##########################################################
+#######################################################################
+#     TRAINING, VALIDATION, EVALUATION SETS CREATION AND PLOTTING     #
+#######################################################################
 
 # Create training/validation (90%) and evaluation (10%) sets
 set.seed(1, sample.kind="Rounding")
@@ -121,8 +102,25 @@ set.seed(1, sample.kind="Rounding")
 test_index <- createDataPartition(y = trainvalid_set$cap.diameter, times = 1, p = 0.1, list = FALSE)
 training_set <- trainvalid_set[-test_index,]
 validation_set <- trainvalid_set[test_index,]
+# #rm(dataset, test_index)          # Clean environment
 
-rm(dataset, test_index)          # Clean environment
+# Plot all monovariate distributions of the training+validation set
+l <- nrow(structure_dataset)
+for (n in 1:l){
+   plot_title <- paste("Mushroom", dataset_names[n], "distribution")
+   plot <- trainvalid_set %>%
+      ggplot(aes_string(x = dataset_names[n])) + #aes_string allows use of string instead of variable name
+      ggtitle(plot_title) +
+      ylab("") +
+      xlab(dataset_names[n]) +
+      theme_bw()
+   if(structure_dataset$Final[n] %in% c("integer", "numeric")) # Histogram for integer/numeric, Barplot for character/factors/logical
+   {plot <- plot + geom_histogram(fill = "gray45")}
+   else
+   {plot <- plot + geom_bar(fill = "gray45")}
+   plotname <- paste0("study_distrib_", dataset_names[n])   # Concatenate "plot_distrib" with the column name
+   assign(plotname, plot)     # Assign the plot to the plot_distrib_colname name
+}
 
 
 ########################################################
@@ -190,20 +188,20 @@ infsup <- function(list_name, input_value, min_max, level_number, n_iter){
 }
 
 # Define function : find all "edible-only" criteria
-single_crit_search <- function(input_list, margin_value){
+single_crit_search <- function(input_list, margin_value, training){
 l <- nrow(input_list)
    for (n in 1:l){
       if(input_list$type[n] %in% c("logical", "factor", "character"))
       {
-         input_list$all_edible[n] <-training_set %>% 
+         input_list$all_edible[n] <-training %>% 
             filter(class == "poisonous", get(input_list$factor[n]) == input_list$level[n]) %>% 
             nrow() == 0  # Find if (for this factor/level combination) there are no poisonous, i.e. ONLY edible species
       }
       else          # Type = integer or numeric
       {
          minmax <- minmaxing(input_list$level[n], margin_value)     # Setting min/max and rounding values for ".$level"
-         current_val <- training_set %>% filter(class == "poisonous") %>% select(input_list$factor[n]) %>% minmax[[1]](.)
-         extremum <- training_set %>%  select(input_list$factor[n]) %>% minmax[[1]](.)
+         current_val <- training %>% filter(class == "poisonous") %>% select(input_list$factor[n]) %>% minmax[[1]](.)
+         extremum <- training %>%  select(input_list$factor[n]) %>% minmax[[1]](.)
          input_list$all_edible[n] <- current_val != extremum
          input_list$level[n] <- infsup(comment(input_list), current_val, minmax, "", n)
          input_list
@@ -213,15 +211,15 @@ l <- nrow(input_list)
 }
 
 # Define function : find all "edible-only" double-criteria
-dual_crit_search <- function(input_list, margin_value){
+dual_crit_search <- function(input_list, margin_value, training){
    l <- nrow(input_list)
    for (n in 1:l){
       if(input_list$type1[n] %in% c("logical", "factor", "character") & input_list$type2[n] %in% c("logical", "factor", "character")) # factor1 & factor 2 are text
       {
-         count <- training_set %>%
+         count <- training %>%
             filter(get(input_list$factor1[n]) == input_list$level1[n], get(input_list$factor2[n]) == input_list$level2[n]) %>%
             nrow
-         count_poison <- training_set %>%
+         count_poison <- training %>%
             filter(class == "poisonous", get(input_list$factor1[n]) == input_list$level1[n], get(input_list$factor2[n]) == input_list$level2[n]) %>%
             nrow
          input_list$all_edible[n] <- count != 0 & count_poison == 0 # Find if (for this factor/level combination) there are mushrooms AND no poisonous, i.e. ONLY edible species
@@ -230,8 +228,8 @@ dual_crit_search <- function(input_list, margin_value){
       {if(input_list$type1[n] %in% c("logical", "factor", "character") & input_list$type2[n] %in% c("numeric", "integer"))
       {
          minmax <- minmaxing(input_list$level2[n], margin_value)
-         current_val <- training_set %>% filter(class == "poisonous", get(input_list$factor1[n]) == input_list$level1[n]) %>% select(input_list$factor2[n]) %>% minmax[[1]](.)
-         extremum <- training_set %>% filter(get(input_list$factor1[n]) == input_list$level1[n]) %>% select(input_list$factor2[n]) %>% minmax[[1]](.)
+         current_val <- training %>% filter(class == "poisonous", get(input_list$factor1[n]) == input_list$level1[n]) %>% select(input_list$factor2[n]) %>% minmax[[1]](.)
+         extremum <- training %>% filter(get(input_list$factor1[n]) == input_list$level1[n]) %>% select(input_list$factor2[n]) %>% minmax[[1]](.)
          input_list$all_edible[n] <- current_val != extremum
          input_list$level2[n] <- infsup(comment(input_list), current_val, minmax, 2, n)
       }
@@ -239,10 +237,10 @@ dual_crit_search <- function(input_list, margin_value){
          {
             minmax1 <- minmaxing(input_list$level1[n], margin_value)
             minmax2 <- minmaxing(input_list$level2[n], margin_value)
-            current_val1 <- training_set %>% filter(class == "poisonous") %>% select(input_list$factor1[n]) %>%  minmax1[[1]](.)
-            extremum1 <- training_set %>%  select(input_list$factor1[n]) %>%  minmax1[[1]](.)
-            current_val2 <- training_set %>% filter(class == "poisonous") %>% select(input_list$factor2[n]) %>%  minmax2[[1]](.)
-            extremum2 <- training_set %>%  select(input_list$factor2[n]) %>%  minmax2[[1]](.)
+            current_val1 <- training %>% filter(class == "poisonous") %>% select(input_list$factor1[n]) %>%  minmax1[[1]](.)
+            extremum1 <- training %>%  select(input_list$factor1[n]) %>%  minmax1[[1]](.)
+            current_val2 <- training %>% filter(class == "poisonous") %>% select(input_list$factor2[n]) %>%  minmax2[[1]](.)
+            extremum2 <- training %>%  select(input_list$factor2[n]) %>%  minmax2[[1]](.)
             input_list$all_edible[n] <- current_val1 != extremum1 & current_val2 != extremum2
             input_list$level1[n] <- infsup(comment(input_list), current_val1, minmax1, 1, n)
             input_list$level2[n] <- infsup(comment(input_list), current_val2, minmax2, 2, n)
@@ -252,7 +250,7 @@ dual_crit_search <- function(input_list, margin_value){
    input_list
 }
 margin1 <- 1.0
-factors_list1 <- single_crit_search(factors_list1, margin1)
+factors_list1 <- single_crit_search(factors_list1, margin1, training_set)
 
 # Get relevant (i.e. edible-only) factors, data types and levels (criterion)
 factors_to_remove <- factors_list1 %>% filter(all_edible == TRUE, type %in% c("factor", "logical", "character")) %>% select(factor, level)
@@ -268,7 +266,7 @@ factors_list2 <- factors_list2[-single_crit_index,]
 rm(one_crit1, one_crit2, single_crit_removal, single_crit_index)    # Clear environment
 
 margin2 <- 1.1
-factors_list2 <- dual_crit_search(factors_list2, margin2)
+factors_list2 <- dual_crit_search(factors_list2, margin2, training_set)
 
 # Show relevant (i.e. edible-only) factors, data types and levels (criterion)
 relevant_factors1 <- factors_list1 %>% filter(all_edible == TRUE) %>% select(factor, level, type)

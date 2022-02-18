@@ -76,7 +76,7 @@ library(knitr)
 library(tidyverse)
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, fig.pos = "!H")
 knitr::write_bib(c("tidyverse", "rmarkdown", "knitr", "ggpubr"), "packages.bib")
-#knitr::write_bib(c("tidyverse", "caret", "data.table", "reshape2", "ggplot2", "ggrepel", "recommenderlab", "stringr", "ggpubr", "rmarkdown", "knitr"), "packages.bib")
+#knitr::write_bib(c("tidyverse", "caret", "data.table", "reshape2", "ggplot2", "recommenderlab", "stringr", "ggpubr", "rmarkdown", "knitr"), "packages.bib")
 ```
 \newpage
 \section{Overview}
@@ -144,7 +144,7 @@ The code, benchmarks and report were run on the following computer configuration
 * SSD : Crucial P5 M2 NVMe
 * OS : Xubuntu Linux
 * R : version 3.6.3
-* Packages : tidyverse[@R-tidyverse] (v1.3.1), ggrepel[@R-ggrepel] (v0.9.1), ggpubr[@R-ggpubr] (v0.4.0), rmarkdown[@R-rmarkdown] (v2.11), knitr[@R-knitr] (v1.34).
+* Packages : tidyverse[@R-tidyverse] (v1.3.1), ggpubr[@R-ggpubr] (v0.4.0), rmarkdown[@R-rmarkdown] (v2.11), knitr[@R-knitr] (v1.34).
 
 \paragraph*{}
 The code was also tested on a Windows 7 x64 computer with 16 GB RAM, and R 4.1.0. It was not tested on any Mac OS system.
@@ -174,14 +174,20 @@ Firstly, the *stem.root = f* value isn't explained. Since most *f* values for th
 kable(uniques_missing_f, caption = "Unique values for stem.root = 'f'")
 ```
 \paragraph*{}
-Secondly, the *cap.surface = d* value isn't explained either. There was no workaround to lift this uncertainty except from performing some searches : digging into the primary dataset, finding all the mushrooms that may have the value *cap.surface = d*, translating the common english name into the scientific (latin) ones and finding the relevant descriptions in mycology books.[@courtecuisse]
+Secondly, the *cap.surface = d* value isn't explained either. There was no workaround to lift this uncertainty except from performing some search : digging into the primary dataset, finding all the mushrooms that may have the value *cap.surface = d*, translating the common english name into the scientific (latin) ones and finding the relevant descriptions in mycology books.[@courtecuisse]
 \paragraph*{}
 This research showed all these mushrooms to have a velvety, or downy surface. A value d = downy was thus assumed.
 \paragraph*{}
 These issues underline why it is important to provide extensive documentation, well-defined variables and values in every datasets and to follow international standards (such as latin names). Fortunately, the author provides the primary dataset with the characteristics of all species; without that file, it would have been impossible to find what characteristic lied under the *cap.surface = d* value.
 \paragraph*{}
-After this data cleaning and editing steps, we can get basic information about our mushroom population, such as dimensional distributions.  
-```{r, echo = FALSE, fig.cap = "Mushroom cap diameter, stem height and stem width distribution"}
+
+\subsection{Training set analysis}
+\paragraph*{}
+The original dataset was first randomly split into a 90%-sized training/validation set, and a 10%-sized evaluation set that is not to be used until the final validation.
+\paragraph*{}
+All dimensional distributions seem to roughly follow a bell curve, with a long tail towards the higher values.A logarithmic transformation can show more clearly the shape of this tail.  
+
+```{r, echo = FALSE, fig.height = 2.5, fig.cap = "Mushroom cap diameter, stem height and stem width distribution"}
 plot(ggarrange(
    ncol = 3,
    study_distrib_cap.diameter + ggtitle("") + ylab("") + scale_y_continuous(labels = NULL),
@@ -189,12 +195,9 @@ plot(ggarrange(
    study_distrib_stem.width + ggtitle("") + ylab("") + scale_y_continuous(labels = NULL)
    )
 )
-```  
-\paragraph*{}
-All dimensional distributions seem to roughly follow a bell curbe, with a long tail towards the higher values.
-\paragraph*{}
-A logarithmic transformation can help us see the shape of this tail.  
-```{r, echo = FALSE, fig.cap = "Mushroom cap diameter, stem height and stem width distribution (log Y scale)"}
+```
+
+```{r, echo = FALSE, fig.height = 2.5, fig.cap = "Mushroom cap diameter, stem height and stem width distribution (log Y scale)"}
 plot(ggarrange(
    ncol = 3,
    study_distrib_cap.diameter + ggtitle("") + ylab("") + scale_y_log10(labels = NULL),
@@ -202,54 +205,46 @@ plot(ggarrange(
    study_distrib_stem.width + ggtitle("") + ylab("") + scale_y_log10(labels = NULL)
    )
 )
-```  
-\paragraph*{}
-The cap diameter distribution looks like a bell curve with a long right tail but actually is bimodal, with a main mode toward 5 cm, and a much smaller secondary mode toward 50 cm. This size can look quite surprising, but some species such as *Polyporus squamosus* (dryad's saddle) can be very large with some specimens that can weight up to 5 kg.
+```
+
+The cap diameter distribution looks like a bell curve with a long right tail but actually is bimodal, with a main mode toward 5 cm, and a much smaller secondary mode toward 50 cm. This size can look quite surprising, but after further investigation, it appears that some species such as *Polyporus squamosus* (dryad's saddle) can be very large, with some specimens that can weight up to 5 kg.[@courtecuisse]
 \paragraph*{}
 The stem height distribution also looks like a bell curve with a long right tail, a main mode around 5 cm, and a secondary mode at 0 cm. Again, this can look surprising, but some mushrooms have no stem, which could explain this height value.
 \paragraph*{}
-The stem width distribution looks like a bell curve with a long right tail, and a peak around 12 mm. In all three distributions, the right tail can probably be explained by the impossibility to have negative dimensional values.
+The stem width distribution looks like a bell curve with a long right tail, and a peak around 10-15 mm. In all three distributions, the right tail can probably be explained by the impossibility to have negative dimensional values.
 
-\subsection{Training, validation and evaluation sets}
+\subsubsection{Single and dual criteria classifiers}  
 \paragraph*{}
-
-
-\subsection{Training set analysis}
+All further classification strategies will be elaborated, tuned and selected on one rule : the specificity on the edibility criterion must be equal to 1, false negatives are not tolerated. In layman's terms, a good algorithm may reject edible mushrooms but should **never** classify a poisonous one as edible.
+\paragraph*{}
+The first models one can build are simple classifiers that categorize the mushrooms as edible or poisonous, based on one or two criteria.
+\paragraph*{}
+Before training, validation and tuning of the algorithms, a training and validation strategy must be defined. Since these models are designed from scratch, and in order to keep the code simple, a basic train-validation split was chosen, with a 90/10 split ratio between the training and validation sets.
 \paragraph*{}
 Once the original dataset is split in training, validation and evaluation sets, one can have a look at the characteristics of the edible and toxic populations and draw conclusions without any risk of overfitting.  
 
-```{r, echo = FALSE, fig.cap = "Mushroom characteristics, training set (log y scale)"}
+```{r, echo = FALSE, fig.height = 6, fig.cap = "Mushroom characteristics, training set (log y scale)"}
 plot(ggarrange(
-   ncol = 3, widths = c(1,1,1.7),
-   train_distrib_cap.diameter + ggtitle("Cap Diameter") + ggtitle("") + ylab("") + scale_y_log10(labels = NULL) + theme(legend.position = "none"),
-   train_distrib_stem.height + ggtitle("Stem Height") + ggtitle("") + ylab("") + scale_y_log10(labels = NULL) + theme(legend.position = "none"),
-   train_distrib_stem.width + ggtitle("Stem Width") + ggtitle("") + ylab("") + scale_y_log10(labels = NULL)
-   )
-)
-```  
-```{r, echo = FALSE, fig.cap = "Mushroom characteristics, training set (log y scale)"}
-plot(ggarrange(
-   ncol = 3, widths = c(1,1,1.6),
-   train_distrib_habitat + ggtitle("Habitat") + ggtitle("") + ylab("") + scale_y_log10(labels = NULL) + theme(legend.position = "none", axis.text.x = element_text(angle = 70, vjust = 1, hjust=1)),
-   train_distrib_spore.print.color + ggtitle("Spore Print Color") + ggtitle("") + ylab("") + scale_y_log10(labels = NULL) + theme(legend.position = "none", axis.text.x = element_text(angle = 70, vjust = 1, hjust=1)),
+   ncol = 3, nrow = 2, common.legend = TRUE,
+   train_distrib_cap.diameter + ggtitle("Cap Diameter") + ggtitle("") + ylab("") + scale_y_log10(labels = NULL),
+   train_distrib_stem.height + ggtitle("Stem Height") + ggtitle("") + ylab("") + scale_y_log10(labels = NULL),
+   train_distrib_stem.width + ggtitle("Stem Width") + ggtitle("") + ylab("") + scale_y_log10(labels = NULL),
+   train_distrib_habitat + ggtitle("Habitat") + ggtitle("") + ylab("") + scale_y_log10(labels = NULL) + theme(axis.text.x = element_text(angle = 70, vjust = 1, hjust=1)),
+   train_distrib_spore.print.color + ggtitle("Spore Print Color") + ggtitle("") + ylab("") + scale_y_log10(labels = NULL) + theme(axis.text.x = element_text(angle = 70, vjust = 1, hjust=1)),
    train_distrib_veil.color + ggtitle("Veil Color") + ggtitle("") + ylab("") + scale_y_log10(labels = NULL) + theme(axis.text.x = element_text(angle = 70, vjust = 1, hjust = 1))
    )
 )
 ```  
-\paragraph*{}
-Differences in the distribution of edible and non edible species can already be seen, and these variations may be used to classify species.
-\paragraph*{}
-Our classification strategy is based on one rule : the specificity on the edibility criterion must be equal to 1, false negative are not tolerated. In layman's terms, a good algorithm may reject edible mushrooms but should **never** classify a poisonous one as edible.
 
-\subsubsection{Single and dual criteria classifier}  
-
-Given the above constraint, a "stupid" algorithm can be designed as a benchmark. This algorithm will simply classify all mushrooms as poisonous, by setting all edibility values to FALSE.
+Differences in the distribution of edible and non edible species can already be seen, and these variations will be used to classify species.
 \paragraph*{}
-A slightly more elaborate algorithm will classify mushrooms as edible if they meet one criterion. For example, in the distributions showed above, the mushroom should be edible if *cap.diameter* > 40, if *spore.print.color* = gray or if *veil.color* = yellow.
+Given the specificity constraint mentioned previously, a "stupid" algorithm can be designed as a benchmark. This algorithm will simply classify all mushrooms as poisonous, by setting all edibility values to FALSE.
 \paragraph*{}
-An even more elaborate algorithm can be elaborated with two factors and will for example, classify a mushroom as edible if *cap.shape* = convex & *cap.surface* = leathery.
+A slightly more elaborate algorithm can classify mushrooms as edible if they meet one criterion. For example, in the distributions showed above, the mushroom should be edible if *cap.diameter* > 40, if *spore.print.color* = gray or if *veil.color* = yellow.
 \paragraph*{}
-The building of this more elaborate model will be discussed here, since the single-criterion one is very similar and can be seen as a simplified version of the two-criteria model.
+A more sophisticated algorithm can be elaborated with two factors and will for example, classify a mushroom as edible if *cap.shape* = convex & *cap.surface* = leathery.
+\paragraph*{}
+The building of this more performant model will be discussed here, since the single-criterion one is very similar and can be seen as a simplified version of the two-criteria model.
 \paragraph*{}
 The very first step was to build the criteria list. All unique *factor* and *logical*  types variables were gathered (with *level* value). The same operation was performed on *numeric* type values, which were then duplicated for *min* and *max* levels. The two datalists were then merged, and joined with a datalist that contained all *type* characteristics of each variable.
 \paragraph*{}
