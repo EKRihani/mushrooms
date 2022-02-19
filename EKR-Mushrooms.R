@@ -145,7 +145,7 @@ factors_list <- left_join(factors_list, factors_type)       # Add relevant type 
 # Build factors list for 1 variable analysis
 factors_list1 <- factors_list
 factors_list1$all_edible <- FALSE                  # Set as poisonous by default
-comment(factors_list1) <- "factors_list1"          # Add the dataframe name as comment, to be used in function.
+#comment(factors_list1) <- "factors_list1"          # Add the dataframe name as comment, to be used in function.
 
 # Build factors list for 2 variables analysis
 m <- nrow(factors_list)
@@ -157,7 +157,7 @@ colnames(half2_list2) <- c("factor2", "level2", "type2")
 factors_list2 <- cbind(half1_list2, half2_list2)
 factors_list2 <- factors_list2 %>% filter(factor1 != factor2)     # Remove duplicates
 factors_list2$all_edible <- FALSE                        # Set as poisonous by default
-comment(factors_list2) <- "factors_list2"                # Add the dataframe name as comment, to be used in function
+#comment(factors_list2) <- "factors_list2"                # Add the dataframe name as comment, to be used in function
 
 rm(numeric_list, half1_list2, half2_list2, index_list2)           # Clean environment
 
@@ -170,17 +170,17 @@ rm(numeric_list, half1_list2, half2_list2, index_list2)           # Clean enviro
 factors_check <- factors_list2 %>% filter(type2 %in% c("logical", "factor", "character"), type1 %in% c("integer", "numeric")) %>% nrow
 
 # Define function : min/max and +/- margin selection
-minmaxing <- function(input_level, margin_value){
-   margin <- as.numeric(as.character(recode_factor(input_level, min = -margin_value, max = margin_value))) # Set +/- margin according to max or min
-   c(match.fun(input_level), margin)               # Set vector with min/max (function) in [[1]] and +/- margin (numeric) in [[2]]
+minmaxing <- function(fcn_input_level, fcn_margins){
+   margin <- as.numeric(as.character(recode_factor(fcn_input_level, min = -fcn_margins, max = fcn_margins))) # Set +/- margin according to max or min
+   c(match.fun(fcn_input_level), margin)               # Set vector with min/max (function) in [[1]] and +/- margin (numeric) in [[2]]
 }
 
 # Define function : rounding + margin computation + add ">" or "<" before the value.
-infsup <- function(list_name, input_value, min_max, level_number, n_iter){
-   level_value <- paste0(list_name, "$level", level_number, "[", n_iter, "]")  # Select factors_list, factors_list1 or factors_list2 .$levels
-   input_value %>% 
+infsup <- function(fcn_list_name, fcn_input_value, fcn_min_max, fcn_level_number, fcn_n_iter){
+   level_value <- paste0(fcn_list_name, "$level", fcn_level_number, "[", fcn_n_iter, "]")  # Select factors_list, factors_list1 or factors_list2 .$levels
+   fcn_input_value %>% 
       round(., digits = 1) %>% 
-      + min_max[[2]] %>% 
+      + fcn_min_max[[2]] %>% 
       max(., 0) %>% # Round, add or remove margin value, set to zero if negative
      paste0(eval(parse(text = level_value)), .) %>% # Paste "min" or "max" before rounded value
     str_replace_all(., "min", "< ") %>%       # Replace "min" by "< "
@@ -188,89 +188,90 @@ infsup <- function(list_name, input_value, min_max, level_number, n_iter){
 }
 
 # Define function : find all "edible-only" criteria
-single_crit_search <- function(input_list, margin_value, training){
-l <- nrow(input_list)
+single_crit_search <- function(fcn_training, fcn_crit_list, fcn_margin){
+   l <- nrow(fcn_crit_list)
+   crit_list_name <- deparse(substitute(fcn_crit_list))
    for (n in 1:l){
-      if(input_list$type[n] %in% c("logical", "factor", "character"))
+      if(fcn_crit_list$type[n] %in% c("logical", "factor", "character"))
       {
-         input_list$all_edible[n] <-training %>% 
-            filter(class == "poisonous", get(input_list$factor[n]) == input_list$level[n]) %>% 
+         fcn_crit_list$all_edible[n] <- fcn_training %>% 
+            filter(class == "poisonous", get(fcn_crit_list$factor[n]) == fcn_crit_list$level[n]) %>% 
             nrow() == 0  # Find if (for this factor/level combination) there are no poisonous, i.e. ONLY edible species
       }
       else          # Type = integer or numeric
       {
-         minmax <- minmaxing(input_list$level[n], margin_value)     # Setting min/max and rounding values for ".$level"
-         current_val <- training %>% filter(class == "poisonous") %>% select(input_list$factor[n]) %>% minmax[[1]](.)
-         extremum <- training %>%  select(input_list$factor[n]) %>% minmax[[1]](.)
-         input_list$all_edible[n] <- current_val != extremum
-         input_list$level[n] <- infsup(comment(input_list), current_val, minmax, "", n)
-         input_list
+         minmax <- minmaxing(fcn_crit_list$level[n], fcn_margin)     # Setting min/max and rounding values for ".$level"
+         current_val <- fcn_training %>% filter(class == "poisonous") %>% select(fcn_crit_list$factor[n]) %>% minmax[[1]](.)
+         extremum <- fcn_training %>%  select(fcn_crit_list$factor[n]) %>% minmax[[1]](.)
+         fcn_crit_list$all_edible[n] <- current_val != extremum
+         fcn_crit_list$level[n] <- infsup(crit_list_name, current_val, minmax, "", n)
       }
    }
-   input_list
+   fcn_crit_list
 }
 
 # Define function : find all "edible-only" double-criteria
-dual_crit_search <- function(input_list, margin_value, training){
-   l <- nrow(input_list)
+dual_crit_search <- function(fcn_training, fcn_crit_list, fcn_margin){
+   l <- nrow(fcn_crit_list)
+   crit_list_name <- deparse(substitute(fcn_crit_list))
    for (n in 1:l){
-      if(input_list$type1[n] %in% c("logical", "factor", "character") & input_list$type2[n] %in% c("logical", "factor", "character")) # factor1 & factor 2 are text
+      if(fcn_crit_list$type1[n] %in% c("logical", "factor", "character") & fcn_crit_list$type2[n] %in% c("logical", "factor", "character")) # factor1 & factor 2 are text
       {
-         count <- training %>%
-            filter(get(input_list$factor1[n]) == input_list$level1[n], get(input_list$factor2[n]) == input_list$level2[n]) %>%
+         count <- fcn_training %>%
+            filter(get(fcn_crit_list$factor1[n]) == fcn_crit_list$level1[n], get(fcn_crit_list$factor2[n]) == fcn_crit_list$level2[n]) %>%
             nrow
-         count_poison <- training %>%
-            filter(class == "poisonous", get(input_list$factor1[n]) == input_list$level1[n], get(input_list$factor2[n]) == input_list$level2[n]) %>%
+         count_poison <- fcn_training %>%
+            filter(class == "poisonous", get(fcn_crit_list$factor1[n]) == fcn_crit_list$level1[n], get(fcn_crit_list$factor2[n]) == fcn_crit_list$level2[n]) %>%
             nrow
-         input_list$all_edible[n] <- count != 0 & count_poison == 0 # Find if (for this factor/level combination) there are mushrooms AND no poisonous, i.e. ONLY edible species
+         fcn_crit_list$all_edible[n] <- count != 0 & count_poison == 0 # Find if (for this factor/level combination) there are mushrooms AND no poisonous, i.e. ONLY edible species
          }
       else          # factor1 is text & factor2 is number
-      {if(input_list$type1[n] %in% c("logical", "factor", "character") & input_list$type2[n] %in% c("numeric", "integer"))
+      {if(fcn_crit_list$type1[n] %in% c("logical", "factor", "character") & fcn_crit_list$type2[n] %in% c("numeric", "integer"))
       {
-         minmax <- minmaxing(input_list$level2[n], margin_value)
-         current_val <- training %>% filter(class == "poisonous", get(input_list$factor1[n]) == input_list$level1[n]) %>% select(input_list$factor2[n]) %>% minmax[[1]](.)
-         extremum <- training %>% filter(get(input_list$factor1[n]) == input_list$level1[n]) %>% select(input_list$factor2[n]) %>% minmax[[1]](.)
-         input_list$all_edible[n] <- current_val != extremum
-         input_list$level2[n] <- infsup(comment(input_list), current_val, minmax, 2, n)
+         minmax <- minmaxing(fcn_crit_list$level2[n], fcn_margin)
+         current_val <- fcn_training %>% filter(class == "poisonous", get(fcn_crit_list$factor1[n]) == fcn_crit_list$level1[n]) %>% select(fcn_crit_list$factor2[n]) %>% minmax[[1]](.)
+         extremum <- fcn_training %>% filter(get(fcn_crit_list$factor1[n]) == fcn_crit_list$level1[n]) %>% select(fcn_crit_list$factor2[n]) %>% minmax[[1]](.)
+         fcn_crit_list$all_edible[n] <- current_val != extremum
+         fcn_crit_list$level2[n] <- infsup(crit_list_name, current_val, minmax, 2, n)
       }
          else     # factor1 & factor2 are numbers
          {
-            minmax1 <- minmaxing(input_list$level1[n], margin_value)
-            minmax2 <- minmaxing(input_list$level2[n], margin_value)
-            current_val1 <- training %>% filter(class == "poisonous") %>% select(input_list$factor1[n]) %>%  minmax1[[1]](.)
-            extremum1 <- training %>%  select(input_list$factor1[n]) %>%  minmax1[[1]](.)
-            current_val2 <- training %>% filter(class == "poisonous") %>% select(input_list$factor2[n]) %>%  minmax2[[1]](.)
-            extremum2 <- training %>%  select(input_list$factor2[n]) %>%  minmax2[[1]](.)
-            input_list$all_edible[n] <- current_val1 != extremum1 & current_val2 != extremum2
-            input_list$level1[n] <- infsup(comment(input_list), current_val1, minmax1, 1, n)
-            input_list$level2[n] <- infsup(comment(input_list), current_val2, minmax2, 2, n)
+            minmax1 <- minmaxing(fcn_crit_list$level1[n], fcn_margin)
+            minmax2 <- minmaxing(fcn_crit_list$level2[n], fcn_margin)
+            current_val1 <- fcn_training %>% filter(class == "poisonous") %>% select(fcn_crit_list$factor1[n]) %>%  minmax1[[1]](.)
+            extremum1 <- fcn_training %>%  select(fcn_crit_list$factor1[n]) %>%  minmax1[[1]](.)
+            current_val2 <- fcn_training %>% filter(class == "poisonous") %>% select(fcn_crit_list$factor2[n]) %>%  minmax2[[1]](.)
+            extremum2 <- fcn_training %>%  select(fcn_crit_list$factor2[n]) %>%  minmax2[[1]](.)
+            fcn_crit_list$all_edible[n] <- current_val1 != extremum1 & current_val2 != extremum2
+            fcn_crit_list$level1[n] <- infsup(crit_list_name, current_val1, minmax1, 1, n)  # Get "fcn_crit_list" as string in the infsup function
+            fcn_crit_list$level2[n] <- infsup(crit_list_name, current_val2, minmax2, 2, n)
          }
       }
    }
-   input_list
+   fcn_crit_list
 }
+
+# Define function : concatenate all single-criterion factor/levels as one string, before removing them from the dual-criteria list
+single_remove <- function(fcn_singlecritlist, fcn_dualcritlist){
+   dual_critlist_name <- deparse(substitute(fcn_dualcritlist))
+   factors_to_remove <- fcn_singlecritlist %>% filter(all_edible == TRUE, type %in% c("factor", "logical", "character")) %>% select(factor, level)
+   one_crit1 <- paste0("(", dual_critlist_name, "$factor1 == '", factors_to_remove$factor, "' & ", dual_critlist_name, "$level1 == '", factors_to_remove$level, "')", collapse = " | ")
+   one_crit2 <- paste0("(", dual_critlist_name, "$factor2 == '", factors_to_remove$factor, "' & ", dual_critlist_name, "$level2 == '", factors_to_remove$level, "')", collapse = " | ")
+   single_crit_removal <- paste(one_crit1, one_crit2, sep = " | ")   # Concatenate factor1 and factor2 lists
+   single_crit_index <- which(eval(parse(text = single_crit_removal)))  # Get all indices
+   fcn_dualcritlist[-single_crit_index,]
+}
+
 margin1 <- 1.0
-factors_list1 <- single_crit_search(factors_list1, margin1, training_set)
-
-# Get relevant (i.e. edible-only) factors, data types and levels (criterion)
-factors_to_remove <- factors_list1 %>% filter(all_edible == TRUE, type %in% c("factor", "logical", "character")) %>% select(factor, level)
-
-# Concatenate all factor/levels as one criteria string, before removing them from the dual-criteria list
-one_crit1 <- paste0("(factors_list2$factor1 == '", factors_to_remove$factor,"' & factors_list2$level1 == '", factors_to_remove$level,"')", collapse = " | ")
-one_crit2 <- paste0("(factors_list2$factor2 == '", factors_to_remove$factor,"' & factors_list2$level2 == '", factors_to_remove$level,"')", collapse = " | ")
-single_crit_removal <- paste(one_crit1, one_crit2, sep = " | ")   # Concatenate factor1 and factor2 lists
-single_crit_index <- which(eval(parse(text = single_crit_removal)))  # Get all indices
-
-# Remove all single-criteria with only edible mushrooms from the dual-criteria list
-factors_list2 <- factors_list2[-single_crit_index,]
-rm(one_crit1, one_crit2, single_crit_removal, single_crit_index)    # Clear environment
+factors_list1a <- single_crit_search(training_set, factors_list1, margin1)
+factors_list2a <- single_remove(factors_list1a, factors_list2)
 
 margin2 <- 1.1
-factors_list2 <- dual_crit_search(factors_list2, margin2, training_set)
+factors_list2b <- dual_crit_search(training_set, factors_list2a, margin2)
 
 # Show relevant (i.e. edible-only) factors, data types and levels (criterion)
-relevant_factors1 <- factors_list1 %>% filter(all_edible == TRUE) %>% select(factor, level, type)
-relevant_factors2 <- factors_list2 %>% filter(all_edible == TRUE) %>% select(factor1, level1, type1, factor2, level2, type2)
+relevant_factors1 <- factors_list1a %>% filter(all_edible == TRUE) %>% select(factor, level, type)
+relevant_factors2 <- factors_list2b %>% filter(all_edible == TRUE) %>% select(factor1, level1, type1, factor2, level2, type2)
 
 # Transform all text factors into "=='factors'" for data analysis
 str_factors1 <- relevant_factors1 %>% filter(type %in% c("factor", "logical", "character")) %>% mutate(level = str_c("== '", level, "'"))
