@@ -13,8 +13,11 @@ library(DataExplorer)   # For exploratory analysis
 library(GGally)         # Correlation plots (pairs)
 
 # Get, decompress, import data file
+#URL <- "https://archive.ics.uci.edu/ml/machine-learning-databases/00615/MushroomDataset.zip"
+ URL <- "https://github.com/EKRihani/mushrooms/raw/master/MushroomDataset.zip"  # Alternative URL
+
 datafile <- tempfile()
-download.file("https://archive.ics.uci.edu/ml/machine-learning-databases/00615/MushroomDataset.zip", datafile)
+download.file(URL, datafile)
 datafile <- unzip(datafile, "MushroomDataset/secondary_data.csv")
 dataset <- read.csv(datafile, header = TRUE, sep = ";")
 
@@ -159,7 +162,6 @@ factors_list <- left_join(factors_list, factors_type)       # Add relevant type 
 # Build factors list for 1 variable analysis
 factors_list1 <- factors_list
 factors_list1$all_edible <- FALSE                  # Set as poisonous by default
-#comment(factors_list1) <- "factors_list1"          # Add the dataframe name as comment, to be used in function.
 
 # Build factors list for 2 variables analysis
 m <- nrow(factors_list)
@@ -171,7 +173,6 @@ colnames(half2_list2) <- c("factor2", "level2", "type2")
 factors_list2 <- cbind(half1_list2, half2_list2)
 factors_list2 <- factors_list2 %>% filter(factor1 != factor2)     # Remove duplicates
 factors_list2$all_edible <- FALSE                        # Set as poisonous by default
-#comment(factors_list2) <- "factors_list2"                # Add the dataframe name as comment, to be used in function
 
 rm(numeric_list, half1_list2, half2_list2, index_list2)           # Clean environment
 
@@ -304,15 +305,19 @@ single_remove <- function(fcn_singlecritlist, fcn_dualcritlist){
    fcn_dualcritlist[-single_crit_index,]
 }
 
-# Define function : convert all text factors into criteria strings for the prediction step
-crit2string <- function(fcn_singlecritlist, fcn_dualcritlist){
+# Define functions : convert all text factors into criteria strings for the prediction step
+crit2string1 <- function(fcn_singlecritlist){
    str_factors1 <- fcn_singlecritlist %>% 
       filter(all_edible == TRUE, type %in% c("factor", "logical", "character")) %>% 
       mutate(level = str_c("== '", level, "'"))
    single_criteria <- fcn_singlecritlist %>% 
       filter (all_edible == TRUE, type %in% c("numeric", "integer")) %>% 
       rbind(str_factors1, .)
+   paste(single_criteria$factor, single_criteria$level, collapse = " | ")
+}
 
+crit2string2 <- function(fcn_singlecritlist, fcn_dualcritlist){
+   mono_criteria_list <- crit2string1(fcn_singlecritlist)
    str_factors2f <- fcn_dualcritlist %>% 
       filter(all_edible == TRUE, type1 %in% c("factor", "logical", "character")) %>% 
       mutate(level1 = str_c("== '", level1, "'"))
@@ -325,14 +330,11 @@ crit2string <- function(fcn_singlecritlist, fcn_dualcritlist){
    double_criteria <- fcn_dualcritlist %>% 
       filter(all_edible == TRUE, type1 %in% c("numeric", "integer")) %>% 
       rbind(str_factors2f, .)
-
-   mono_criteria_list <- paste(single_criteria$factor, single_criteria$level, collapse = " | ")
    double_criteria_list <- paste("(", double_criteria$factor1, double_criteria$level1, "&", double_criteria$factor2, double_criteria$level2, ")",collapse = " | ")
    bi_criteria_list <- paste(mono_criteria_list, "|", double_criteria_list)
 
    c(mono_criteria_list, bi_criteria_list)
 }
-
 
 # Run criteria analyses for single and dual-criteria models
 margin1 <- 1.0
@@ -345,7 +347,7 @@ factors_list2b <- dual_crit_search(training_set, factors_list2a, margin2)
 relevant_factors1 <- factors_list1a %>% filter(all_edible == TRUE) %>% select(factor, level, type)
 relevant_factors2 <- factors_list2b %>% filter(all_edible == TRUE) %>% select(factor1, level1, type1, factor2, level2, type2)
 
-criteria_list_prediction <- crit2string(factors_list1a, factors_list2b)
+criteria_list_prediction <- crit2string2(factors_list1a, factors_list2b)
 
 # Create a prediction dataset, with boolean factors (meaning "is.edible") as .$reference
 predictions <- validation_set
@@ -371,9 +373,64 @@ CM_monocrit$byClass
 CM_bicrit$byClass
 CM_monocrit$table
 CM_bicrit$table
-#predictions %>% filter (reference == FALSE & bi_predict == TRUE)
 
+# Define functions : get sensitivity/specificity according to margin, for single-crit tuning
+tuning1a <- function(fcn_trainset, fcn_factorlist, fcn_margin){
+   factlistname <- deparse(substitute(fcn_factorlist))            # Get factor list name as string
+   SCS <- paste0("single_crit_search(fcn_trainset, ", factlistname, ", fcn_margin)")      # Create single-search string
+   fact_list <- eval(parse(text = SCS))            # Evaluate single-search string (or nested functions will not detect accurately the original factor list name)
+   critlist_prediction <- crit2string1(fact_list)
+   predictions$tuning <- FALSE
+   predictions <- predictions %>% mutate(tuning = eval(parse(text = critlist_prediction[[1]])))
+   predictions$tuning <- as.factor(predictions$tuning)
+   CM <- confusionMatrix(data = predictions$tuning, reference = predictions$reference, positive = "TRUE")
+   sensitivity <- round(CM$byClass["Sensitivity"], 4)
+   specificity <- round(CM$byClass["Specificity"], 4)
+   names(fcn_margin) <- "Margin"
+   c(fcn_margin, sensitivity, specificity)
+}
 
+tuning1b <- function(fcn_margin){
+   tuning1a(training_set, factors_list1, fcn_margin)
+}
+
+margin1 <- seq(from = 0, to = 2.5, by = 0.1)
+single_crit_tune <- t(sapply(margin1, FUN = tuning1b))
+single_crit_tune <- as.data.frame(single_crit_tune)
+
+best_margin1 <- single_crit_tune %>% 
+   filter(Specificity == max(Specificity)) %>% 
+   filter(Sensitivity == max(Sensitivity)) %>% 
+   filter(Margin == max(Margin)) %>%
+   select(Margin)
+
+tuning2a <- function(fcn_trainset, fcn_factorlist1, fcn_factorlist2, fcn_margin2){
+   factlistname2 <- deparse(substitute(fcn_factorlist2))            # Get factor list name as string
+   DCS <- paste0("dual_crit_search(fcn_trainset, ", factlistname2, ", fcn_margin2)")      # Create dual-search string
+   fact2_list <- eval(parse(text = DCS))            # Evaluate dual-search string (or nested functions will not detect accurately the original factor list name)
+   critlist_prediction <- crit2string2(fcn_factorlist1, fact2_list)
+   predictions$tuning <- FALSE
+   predictions <- predictions %>% mutate(tuning = eval(parse(text = critlist_prediction[[2]])))
+   predictions$tuning <- as.factor(predictions$tuning)
+   CM <- confusionMatrix(data = predictions$tuning, reference = predictions$reference, positive = "TRUE")
+   sensitivity <- round(CM$byClass["Sensitivity"], 4)
+   specificity <- round(CM$byClass["Specificity"], 4)
+   names(fcn_margin2) <- "Margin"
+   c(fcn_margin2, sensitivity, specificity)
+}
+
+tuning2b <- function(fcn_margin){
+   tuning2a(training_set, factors_list1a, factors_list2a, fcn_margin)
+}
+
+# Run single list with optimum margin, set crit list for factor 2
+factors_list1a <- single_crit_search(training_set, factors_list1, as.numeric(best_margin1))
+factors_list2a <- single_remove(factors_list1a, factors_list2)
+
+margin2 <- seq(from = 0, to = 3, by = 0.2)
+dual_crit_tune <- t(sapply(margin2, FUN = tuning2b))
+dual_crit_tune <- as.data.frame(dual_crit_tune)
+dual_crit_tune
 
 #############################################
 #     DESCRIPTIVE TRAINING SET ANALYSIS     #
@@ -390,7 +447,6 @@ for (n in 2:l){    # Column 1 (class) isn't plotted since it's the fill attribut
       ylab("Frequency") +
       xlab(dataset_names[n]) +
       scale_y_log10() +
-      #      scale_color_brewer(palette = "Set1", direction = -1) +
       theme_bw()
    if(structure_dataset$Final[n] %in% c("integer", "numeric"))  # Histogram for integer/numeric, Barplot for character/factors/logical
    {plot <- plot + geom_histogram()}
@@ -412,7 +468,6 @@ l <- length(dataset_reduced_names)
 #      plot <- training_set %>%
 #         ggplot(aes_string(x = dataset_reduced_names[n], y = dataset_reduced_names[m], color = training_set$class)) + #aes_string allows use of string instead of variable name
 #         labs(colour = "class", x = dataset_reduced_names[n], y =dataset_reduced_names[m]) +
-#         #scale_color_brewer(palette = "Set1", direction = -1) +
 #         theme_bw()
 #       if(structure_dataset_reduced$Final[n] %in% c("integer", "numeric") & structure_dataset_reduced$Final[m] %in% c("integer", "numeric"))  # Histogram for 2x integer/numeric,
 #          {plot <- plot + geom_point(alpha = .4, shape = 20, size =2)} # regular scatterplot if all variables are numeric/integer
