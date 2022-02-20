@@ -447,7 +447,7 @@ for (n in 2:l){         # Don't plot first col : it is the x axis
       ggplot(aes_string(x = "Margin", y = names(single_crit_tune)[n])) + #aes_string allows use of string instead of variable name
       geom_point() +
       theme_bw()
-   plotname <- paste0("SCtune", dataset_names[n])   # Concatenate "train_distrib" with the column name
+   plotname <- paste0("SCtune", names(single_crit_tune)[n])   # Concatenate "train_distrib" with the column name
    assign(plotname, plot)     # Assign the plot to the train_distrib_colname name
    rm(plot)    # Clear environment
 }
