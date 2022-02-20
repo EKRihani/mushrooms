@@ -14,7 +14,7 @@ library(GGally)         # Correlation plots (pairs)
 
 # Get, decompress, import data file
 #URL <- "https://archive.ics.uci.edu/ml/machine-learning-databases/00615/MushroomDataset.zip"
- URL <- "https://github.com/EKRihani/mushrooms/raw/master/MushroomDataset.zip"  # Alternative URL
+URL <- "https://github.com/EKRihani/mushrooms/raw/master/MushroomDataset.zip"  # Alternative URL
 
 datafile <- tempfile()
 download.file(URL, datafile)
@@ -199,9 +199,9 @@ infsup <- function(fcn_list_name, fcn_input_value, fcn_min_max, fcn_level_number
       round(., digits = 1) %>% 
       + fcn_min_max[[2]] %>% 
       max(., 0) %>% # Round, add or remove margin value, set to zero if negative
-     paste0(eval(parse(text = level_value)), .) %>% # Paste "min" or "max" before rounded value
-    str_replace_all(., "min", "< ") %>%       # Replace "min" by "< "
-    str_replace_all(., "max", "> ")           # Replace "max" by "> "
+      paste0(eval(parse(text = level_value)), .) %>% # Paste "min" or "max" before rounded value
+      str_replace_all(., "min", "< ") %>%       # Replace "min" by "< "
+      str_replace_all(., "max", "> ")           # Replace "max" by "> "
 }
 
 # Define function : find all "edible-only" criteria
@@ -247,7 +247,7 @@ dual_crit_search <- function(fcn_training, fcn_crit_list, fcn_margin){
                    get(fcn_crit_list$factor2[n]) == fcn_crit_list$level2[n]) %>%
             nrow
          fcn_crit_list$all_edible[n] <- count != 0 & count_poison == 0 # Find if (for this factor/level combination) there are mushrooms AND no poisonous, i.e. ONLY edible species
-         }
+      }
       else          # factor1 is text & factor2 is number
       {if(fcn_crit_list$type1[n] %in% c("logical", "factor", "character") & fcn_crit_list$type2[n] %in% c("numeric", "integer"))
       {
@@ -301,7 +301,7 @@ single_remove <- function(fcn_singlecritlist, fcn_dualcritlist){
                        dual_critlist_name, "$level2 == '", factors_to_remove$level, "')", collapse = " | ")
    single_crit_removal <- paste(one_crit1, one_crit2, sep = " | ")            # Concatenate factor1 and factor2 lists
    single_crit_index <- which(eval(parse(text = single_crit_removal)))        # Get all indices
-
+   
    fcn_dualcritlist[-single_crit_index,]
 }
 
@@ -332,7 +332,7 @@ crit2string2 <- function(fcn_singlecritlist, fcn_dualcritlist){
       rbind(str_factors2f, .)
    double_criteria_list <- paste("(", double_criteria$factor1, double_criteria$level1, "&", double_criteria$factor2, double_criteria$level2, ")",collapse = " | ")
    bi_criteria_list <- paste(mono_criteria_list, "|", double_criteria_list)
-
+   
    c(mono_criteria_list, bi_criteria_list)
 }
 
