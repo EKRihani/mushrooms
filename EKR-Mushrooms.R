@@ -13,8 +13,8 @@ library(DataExplorer)   # For exploratory analysis
 library(GGally)         # Correlation plots (pairs)
 
 # Get, decompress, import data file
-#URL <- "https://archive.ics.uci.edu/ml/machine-learning-databases/00615/MushroomDataset.zip"
-URL <- "https://github.com/EKRihani/mushrooms/raw/master/MushroomDataset.zip"  # Alternative URL
+URL <- "https://archive.ics.uci.edu/ml/machine-learning-databases/00615/MushroomDataset.zip"
+#URL <- "https://github.com/EKRihani/mushrooms/raw/master/MushroomDataset.zip"  # Alternative URL
 
 datafile <- tempfile()
 download.file(URL, datafile)
@@ -58,7 +58,6 @@ dataset$habitat <- recode_factor(dataset$habitat, g = "grasses", l = "leaves", m
 dataset$season <- recode_factor(dataset$season, s = "spring", u = "summer", a = "autumn", w = "winter")
 dataset$does.bruise.or.bleed <- as.logical(as.character(recode_factor(dataset$does.bruise.or.bleed, t = TRUE, f = FALSE)))
 dataset$has.ring <- as.logical(as.character(recode_factor(dataset$has.ring, t = TRUE, f = FALSE)))
-head(dataset)
 
 # Get final dataset structure information
 structure_final <- sapply(X = dataset, FUN = class, simplify = TRUE)    # Get all final dataset variables classes
@@ -84,7 +83,7 @@ summary_number <- nrow(dataset)  # Mushroom count
 summary_dataset <- summary(dataset) # Basic summary of all categories
 
 # Distribution plots for numeric/integer parameters
-dataset_names <-row.names(structure_dataset)
+dataset_names <- row.names(structure_dataset)
 
 
 #######################################################################
@@ -337,10 +336,10 @@ crit2string2 <- function(fcn_singlecritlist, fcn_dualcritlist){
 }
 
 # Run criteria analyses for single and dual-criteria models
-margin1 <- 1.0
+margin1 <- 2
 factors_list1a <- single_crit_search(training_set, factors_list1, margin1)
 factors_list2a <- single_remove(factors_list1a, factors_list2)
-margin2 <- 1.1
+margin2 <- 3
 factors_list2b <- dual_crit_search(training_set, factors_list2a, margin2)
 
 # Show relevant (i.e. edible-only) factors, data types and levels (criterion)
@@ -369,10 +368,10 @@ CM_stupid <- confusionMatrix(data = predictions$stupid_predict, reference = pred
 CM_monocrit <- confusionMatrix(data = predictions$mono_predict, reference = predictions$reference, positive = "TRUE")
 CM_bicrit <- confusionMatrix(data = predictions$bi_predict, reference = predictions$reference, positive = "TRUE")
 
-CM_monocrit$byClass
-CM_bicrit$byClass
-CM_monocrit$table
-CM_bicrit$table
+# CM_monocrit$byClass
+# CM_bicrit$byClass
+# CM_monocrit$table
+# CM_bicrit$table
 
 # Define functions : get sensitivity/specificity according to margin, for single-crit tuning
 tuning1a <- function(fcn_trainset, fcn_factorlist, fcn_margin){
@@ -386,23 +385,10 @@ tuning1a <- function(fcn_trainset, fcn_factorlist, fcn_margin){
    CM <- confusionMatrix(data = predictions$tuning, reference = predictions$reference, positive = "TRUE")
    sensitivity <- round(CM$byClass["Sensitivity"], 4)
    specificity <- round(CM$byClass["Specificity"], 4)
+   F1 <- round(CM$byClass["F1"], 4)
    names(fcn_margin) <- "Margin"
-   c(fcn_margin, sensitivity, specificity)
+   c(fcn_margin, sensitivity, specificity, F1)
 }
-
-tuning1b <- function(fcn_margin){
-   tuning1a(training_set, factors_list1, fcn_margin)
-}
-
-margin1 <- seq(from = 0, to = 2.5, by = 0.1)
-single_crit_tune <- t(sapply(margin1, FUN = tuning1b))
-single_crit_tune <- as.data.frame(single_crit_tune)
-
-best_margin1 <- single_crit_tune %>% 
-   filter(Specificity == max(Specificity)) %>% 
-   filter(Sensitivity == max(Sensitivity)) %>% 
-   filter(Margin == max(Margin)) %>%
-   select(Margin)
 
 tuning2a <- function(fcn_trainset, fcn_factorlist1, fcn_factorlist2, fcn_margin2){
    factlistname2 <- deparse(substitute(fcn_factorlist2))            # Get factor list name as string
@@ -415,22 +401,56 @@ tuning2a <- function(fcn_trainset, fcn_factorlist1, fcn_factorlist2, fcn_margin2
    CM <- confusionMatrix(data = predictions$tuning, reference = predictions$reference, positive = "TRUE")
    sensitivity <- round(CM$byClass["Sensitivity"], 4)
    specificity <- round(CM$byClass["Specificity"], 4)
+   F1 <- round(CM$byClass["F1"], 4)
    names(fcn_margin2) <- "Margin"
-   c(fcn_margin2, sensitivity, specificity)
+   c(fcn_margin2, sensitivity, specificity, F1)
+}
+
+tuning1b <- function(fcn_margin){
+   tuning1a(training_set, factors_list1, fcn_margin)
 }
 
 tuning2b <- function(fcn_margin){
    tuning2a(training_set, factors_list1a, factors_list2a, fcn_margin)
 }
 
-# Run single list with optimum margin, set crit list for factor 2
-factors_list1a <- single_crit_search(training_set, factors_list1, as.numeric(best_margin1))
+# Set margin list and run single list classifier tuning
+margin_1 <- c(seq(from = 0, to = 0.4, by = 0.1), seq(from = 0.5, to = 4, by = 0.5))
+single_crit_tune <- t(sapply(margin_1, FUN = tuning1b))
+single_crit_tune <- as.data.frame(single_crit_tune)
+
+# Get best margin (highest specificity, then highest sensitivity, then safest margin)
+best_margin1 <- single_crit_tune %>% 
+   filter(Specificity == max(Specificity)) %>% 
+   filter(Sensitivity == max(Sensitivity)) %>% 
+   filter(Margin == max(Margin))
+
+# Run single list  classifier with optimum margin, set crit list for factor 2
+factors_list1a <- single_crit_search(training_set, factors_list1, as.numeric(best_margin1["Margin"]))
 factors_list2a <- single_remove(factors_list1a, factors_list2)
 
-margin2 <- seq(from = 0, to = 3, by = 0.2)
-dual_crit_tune <- t(sapply(margin2, FUN = tuning2b))
+# Run double list classifier tuning
+margin_2 <- seq(from = 0, to = 2, by = 0.2)
+dual_crit_tune <- t(sapply(margin_2, FUN = tuning2b))
 dual_crit_tune <- as.data.frame(dual_crit_tune)
-dual_crit_tune
+
+# Get best margin (highest specificity, then highest sensitivity, then safest margin)
+best_margin2 <- dual_crit_tune %>% 
+   filter(Specificity == max(Specificity)) %>% 
+   filter(Sensitivity == max(Sensitivity)) %>% 
+   filter(Margin == max(Margin))
+
+# GRAPHIQUE A FINIR !!!
+l <- ncol(single_crit_tune)
+for (n in 2:l){         # Don't plot first col : it is the x axis
+   plot <- single_crit_tune %>%
+      ggplot(aes_string(x = "Margin", y = names(single_crit_tune)[n])) + #aes_string allows use of string instead of variable name
+      geom_point() +
+      theme_bw()
+   plotname <- paste0("SCtune", dataset_names[n])   # Concatenate "train_distrib" with the column name
+   assign(plotname, plot)     # Assign the plot to the train_distrib_colname name
+   rm(plot)    # Clear environment
+}
 
 #############################################
 #     DESCRIPTIVE TRAINING SET ANALYSIS     #
@@ -456,6 +476,8 @@ for (n in 2:l){    # Column 1 (class) isn't plotted since it's the fill attribut
    assign(plotname, plot)     # Assign the plot to the train_distrib_colname name
    rm(plot)    # Clear environment
 }
+
+
 
 # For bivariate analysis : reduced dataset factor names list (<= 6 levels or numeric)
 structure_dataset_reduced <- structure_dataset %>% filter(Levels <= 6 | Final == "numeric")
