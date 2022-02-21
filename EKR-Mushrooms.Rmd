@@ -235,7 +235,11 @@ Given the specificity constraint mentioned previously, a "stupid" algorithm can 
 A slightly more elaborate algorithm can classify mushrooms as edible if they meet one criterion. For example, in the distributions showed above, the mushroom should be edible if *cap.diameter* > 40, if *spore.print.color* = gray or if *veil.color* = yellow.
 \paragraph*{}
 A more sophisticated algorithm can be elaborated with two factors and will for example, classify a mushroom as edible if *cap.shape* = convex & *cap.surface* = leathery.
-\paragraph*{}
+
+```{r, echo = FALSE, fig.height = 6, fig.cap = "Secondary mushroom dataset structure"}
+pair_plots
+```  
+
 The building of this more performant model will be discussed here, since the single-criterion one is very similar and can be seen as a simplified version of the two-criteria model.
 \paragraph*{}
 The very first step was to build the criteria list. All unique *factor* and *logical*  types variables were gathered (with *level* value). The same operation was performed on *numeric* type values, which were then duplicated for *min* and *max* levels. The two datalists were then merged, and joined with a datalist that contained all *type* characteristics of each variable.

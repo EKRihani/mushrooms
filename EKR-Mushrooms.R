@@ -9,7 +9,6 @@ if(!require(caret)) install.packages("caret", repos = "http://cran.us.r-project.
 # Load required libraries
 library(tidyverse)      # Set of packages used in everyday data analyses
 library(caret)          # Set of packages for machine learning
-library(DataExplorer)   # For exploratory analysis
 library(GGally)         # Correlation plots (pairs)
 
 # Get, decompress, import data file
@@ -65,18 +64,13 @@ structure_final <- sapply(X = dataset, FUN = class, simplify = TRUE)    # Get al
 # Merge initial and final dataset structure information
 structure_dataset <- data.frame(cbind(structure_initial, structure_uniques, structure_final))
 colnames(structure_dataset) <- c("Initial", "Levels", "Final")
-structure_dataset$Levels <- as.numeric(structure_dataset$Levels)
+structure_dataset$Levels <- as.numeric(as.character(structure_dataset$Levels))
 
 #rm(unique_length, data_missing_f)      # Clean environment
 
 ##################################
 #     INTRODUCTORY ANALYSIS      #
 ##################################
-
-# Exploratory analysis with DataExplorer        https://cran.r-project.org/web/packages/DataExplorer/vignettes/dataexplorer-intro.html
-plot_str(dataset)
-plot_bar(dataset)
-#### Avec summarytools ?      https://cran.r-project.org/web/packages/summarytools/vignettes/introduction.html
 
 # Introductory summaries
 summary_number <- nrow(dataset)  # Mushroom count
@@ -442,7 +436,7 @@ for (n in 2:l){         # Don't plot first col : it is the x axis
       ggplot(aes_string(x = "Margin", y = names(single_crit_tune)[n])) + #aes_string allows use of string instead of variable name
       geom_point() +
       theme_bw()
-   plotname <- paste0("SCtune", names(single_crit_tune)[n])   # Concatenate "train_distrib" with the column name
+   plotname <- paste0("SCtune", names(single_crit_tune)[n])   # Concatenate "SCtune" with the column name
    assign(plotname, plot)     # Assign the plot to the train_distrib_colname name
    rm(plot)    # Clear environment
 }
@@ -454,11 +448,27 @@ for (n in 2:l){         # Don't plot first col : it is the x axis
       ggplot(aes_string(x = "Margin", y = names(dual_crit_tune)[n])) + #aes_string allows use of string instead of variable name
       geom_point() +
       theme_bw()
-   plotname <- paste0("DCtune", names(dual_crit_tune)[n])   # Concatenate "train_distrib" with the column name
+   plotname <- paste0("DCtune", names(dual_crit_tune)[n])   # Concatenate "DCtune" with the column name
    assign(plotname, plot)     # Assign the plot to the train_distrib_colname name
    rm(plot)    # Clear environment
 }
 
+# Define function : Sensitivity, Specificity, F1-Score plot           ####  MARCHE PAS ##########
+SenSpeF1plot <- function(fcn_critlist){
+   l <- ncol(fcn_critlist)
+   for (n in 2:l){
+      plot <- fcn_critlist %>%
+         ggplot(aes_string(x = "Margin", y = names(fcn_critlist)[n])) + #aes_string allows use of string instead of variable name
+         geom_point() +
+         theme_bw()
+      name <- deparse(substitute(fcn_critlist))
+      letter <- str_sub(name, start = 1, end = 1)
+      plotname <- paste0(letter,"c_tune_", names(fcn_critlist)[n])   # Create the plot name
+      assign(plotname, plot)     # Assign the plot to the plot name
+   }
+}
+
+test <- SenSpeF1plot(dual_crit_tune)
 #############################################
 #     DESCRIPTIVE TRAINING SET ANALYSIS     #
 #############################################
@@ -484,35 +494,10 @@ for (n in 2:l){    # Column 1 (class) isn't plotted since it's the fill attribut
    rm(plot)    # Clear environment
 }
 
-
-
-# For bivariate analysis : reduced dataset factor names list (<= 6 levels or numeric)
-structure_dataset_reduced <- structure_dataset %>% filter(Levels <= 6 | Final == "numeric")
-dataset_reduced_names <-  rownames(structure_dataset_reduced)
-l <- length(dataset_reduced_names)
-
-#Plot all bivariate distributions of the training set (poisonous vs edible)
-# for (n in 2:l){    # Column 1 (class) isn't plotted since it's the color attribute
-#   for (m in 2:l){
-#      plot <- training_set %>%
-#         ggplot(aes_string(x = dataset_reduced_names[n], y = dataset_reduced_names[m], color = training_set$class)) + #aes_string allows use of string instead of variable name
-#         labs(colour = "class", x = dataset_reduced_names[n], y =dataset_reduced_names[m]) +
-#         theme_bw()
-#       if(structure_dataset_reduced$Final[n] %in% c("integer", "numeric") & structure_dataset_reduced$Final[m] %in% c("integer", "numeric"))  # Histogram for 2x integer/numeric,
-#          {plot <- plot + geom_point(alpha = .4, shape = 20, size =2)} # regular scatterplot if all variables are numeric/integer
-#       else
-#          {plot <- plot + geom_jitter(alpha = .4, shape = 20, size = 2)} # jitter if 1 or 2 variables are character/factors/logical
-#       if(structure_dataset_reduced$Final[n] %in% c("factor", "logical", "character"))
-#          {plot <- plot + scale_x_discrete(guide = guide_axis(angle = 90))} # rotate X axis labels if text
-#       plotname <- paste0("train_distrib_",dataset_reduced_names[n],"_",dataset_reduced_names[m])   # Concatenate "train_distrib" with the column names
-#       assign(plotname, plot)     # Assign the plot to the train_distrib_colname1_colname2 name
-#    }
-# }
-
-# Graphiques corrélations avec ggpairs.
+# Correlation graphs for some criterias
 pair_plots <- ggpairs(
    training_set,
-   columns = c(2,6,7,10,11),
+   columns = c(2,15,17,10),
    lower = NULL,
    diag = list(continuous = wrap("densityDiag", alpha = .6), 
                discrete = wrap("barDiag")
@@ -523,7 +508,6 @@ pair_plots <- ggpairs(
    ),
    ggplot2::aes(color = class)
 )
-
 
 ###################################################
 #     TRAINING SET ANALYSIS WITH CARET MODELS     #
