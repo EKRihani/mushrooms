@@ -137,17 +137,9 @@ This dataset contains the data from n = `r summary_number` mushrooms (rows). Eac
 \section{Methods and Analysis}
 \subsection{Computer and R configuration}
 \paragraph*{}
-The code and report were run on the following computer configuration :
-
-* CPU : AMD Ryzen 5 5600G
-* RAM : 2x16 GB DDR4-3200
-* SSD : Crucial P5 M2 NVMe
-* OS : Xubuntu Linux 20.04 LTS
-* R : version 3.6.3
-* Packages : tidyverse[@R-tidyverse] (v1.3.1), caret[@-caret] (v6.0-88), ggpubr[@R-ggpubr] (v0.4.0), rmarkdown[@R-rmarkdown] (v2.11), knitr[@R-knitr] (v1.34).
-
+The code and report were run on a Xubuntu Linux 20.04 LTS system, with R 3.6.3 and the following packages : tidyverse[@R-tidyverse] (v1.3.1), caret[@-caret] (v6.0-88), ggpubr[@R-ggpubr] (v0.4.0), rmarkdown[@R-rmarkdown] (v2.11), knitr[@R-knitr] (v1.34).
 \paragraph*{}
-The code was also tested on a Windows 7 x64 computer with 16 GB RAM, and R 4.1.0. It was not tested on any Mac OS system.
+The code was also tested on a Windows 7 x64 computer on R 4.1.0. It was not tested on any Mac OS system.
 \subsection{Data preparation and cleaning}
 \paragraph*{}
 The dataset is directly downloaded from the UCI database in zip format and unzipped. The archive contains four files :
@@ -319,20 +311,32 @@ As said in the previous section, the endpoint is not an optimum on the ROC curve
 3. Largest (*i.e.* safest) margin.  
 \paragraph*{}
 On the single-criterion model, the hyperparameter optimization gave the following results :  
-```{r out.width = "90%", echo = FALSE}
 
-kable(single_crit_tune, caption = "Single-criterion model margin optimization")
-```
+```{r, echo = FALSE, fig.height = 3, fig.cap = "Sensitivity, specificity and F1-score of single-criteron classifier"}
+plot(ggarrange(
+   ncol = 3,
+   SCtuneSensitivity,
+   SCtuneSpecificity,
+   SCtuneF1
+   )
+)
+```  
 
 An optimum was reached for $m_{1} =$ `r best_margin1["Margin"]`, which gives $Sens_{1} =$ `r best_margin1["Sensitivity"]` for $Spec_{1}$ = `r best_margin1["Specificity"]`.
 \paragraph*{}
-A second hyperparameter optimization run was performed on the two-criteria model, using this same $m_{1}$ value for all single-criterion classification. This run gave the following results :  
-```{r out.width = "90%", echo = FALSE}
+A second hyperparameter optimization run was performed on the two-criteria model, using the same $m_{1}$ value for all single-criterion classification. This run gave the following sensitivity, specificity and F1-score plots :  
 
-kable(dual_crit_tune, caption = "Dual-criterion model margin optimization")
-```
+```{r, echo = FALSE, fig.height = 3, fig.cap = "Sensitivity, specificity and F1-score of dual-criteron classifier"}
+plot(ggarrange(
+   ncol = 3,
+   DCtuneSensitivity,
+   DCtuneSpecificity,
+   DCtuneF1
+   )
+)
+```  
 
-The best result was achieved with $m_{1} =$ `r best_margin1["Margin"]` and $m_{2} =$ `r best_margin2["Margin"]` , which a final performance of $Sens_{2} =$ `r best_margin2["Sensitivity"]` for $Spec_{2} =$ `r best_margin2["Specificity"]`.
+The best result was achieved with $m_{1} =$ `r best_margin1["Margin"]` and $m_{2} =$ `r best_margin2["Margin"]` , which a final performance of $Sens_{2} =$ `r best_margin2["Sensitivity"]` for $Spec_{2} =$ `r best_margin2["Specificity"]`. The specificity constraint does not provide the best F1-score.
 
 \newpage
 \subsubsection{Caret package models}  

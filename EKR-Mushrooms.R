@@ -368,11 +368,6 @@ CM_stupid <- confusionMatrix(data = predictions$stupid_predict, reference = pred
 CM_monocrit <- confusionMatrix(data = predictions$mono_predict, reference = predictions$reference, positive = "TRUE")
 CM_bicrit <- confusionMatrix(data = predictions$bi_predict, reference = predictions$reference, positive = "TRUE")
 
-# CM_monocrit$byClass
-# CM_bicrit$byClass
-# CM_monocrit$table
-# CM_bicrit$table
-
 # Define functions : get sensitivity/specificity according to margin, for single-crit tuning
 tuning1a <- function(fcn_trainset, fcn_factorlist, fcn_margin){
    factlistname <- deparse(substitute(fcn_factorlist))            # Get factor list name as string
@@ -448,6 +443,18 @@ for (n in 2:l){         # Don't plot first col : it is the x axis
       geom_point() +
       theme_bw()
    plotname <- paste0("SCtune", names(single_crit_tune)[n])   # Concatenate "train_distrib" with the column name
+   assign(plotname, plot)     # Assign the plot to the train_distrib_colname name
+   rm(plot)    # Clear environment
+}
+
+# GRAPHIQUE A FINIR !!!
+l <- ncol(dual_crit_tune)
+for (n in 2:l){         # Don't plot first col : it is the x axis
+   plot <- dual_crit_tune %>%
+      ggplot(aes_string(x = "Margin", y = names(dual_crit_tune)[n])) + #aes_string allows use of string instead of variable name
+      geom_point() +
+      theme_bw()
+   plotname <- paste0("DCtune", names(dual_crit_tune)[n])   # Concatenate "train_distrib" with the column name
    assign(plotname, plot)     # Assign the plot to the train_distrib_colname name
    rm(plot)    # Clear environment
 }
