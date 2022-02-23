@@ -538,12 +538,9 @@ fit_test <- function(fit_model, parameters){
    accuracy <- confusionMatrix(prediction, validation_set$class)$overall[["Accuracy"]]
    accuracy
 }
-fit_test("LogitBoost", "")
-
-#qda_fitting <- train(class ~ ., method = "qda", data = training_set)
-#qda_prediction <- predict(qda_fitting, validation_set, type = "raw")
-#confusionMatrix(qda_prediction, validation_set$class)$overall[["Accuracy"]]
-
+fit_test("lda2", "")
+lda2_param <- c("lda2", "")
+fit_tes(lda2_param)
 # Modèles :
 # Tree: rpart2, rpartCost, ctree, ctree2
 # Random Forest: rfern, ranger, Rborist
