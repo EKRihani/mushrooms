@@ -429,46 +429,31 @@ best_margin2 <- dual_crit_tune %>%
    filter(Sensitivity == max(Sensitivity)) %>% 
    filter(Margin == max(Margin))
 
-# GRAPHIQUE A FINIR !!!
+# Define function : Sensitivity, Specificity, F1-Score plot
+SenSpeF1plot <- function(fcn_tuneresult, fcn_n){
+   fcn_tuneresult %>%
+      ggplot(aes_string(x = "Margin", y = names(fcn_tuneresult)[fcn_n])) + #aes_string allows use of string instead of variable name
+      geom_point() +
+      theme_bw()
+}
+
+# Plot single_crit tuning parameters
 l <- ncol(single_crit_tune)
 for (n in 2:l){         # Don't plot first col : it is the x axis
-   plot <- single_crit_tune %>%
-      ggplot(aes_string(x = "Margin", y = names(single_crit_tune)[n])) + #aes_string allows use of string instead of variable name
-      geom_point() +
-      theme_bw()
+   plot <- SenSpeF1plot(single_crit_tune, n)
    plotname <- paste0("SCtune", names(single_crit_tune)[n])   # Concatenate "SCtune" with the column name
    assign(plotname, plot)     # Assign the plot to the train_distrib_colname name
-   rm(plot)    # Clear environment
 }
 
-# GRAPHIQUE A FINIR !!!
+# Plot dual_crit tuning parameters
 l <- ncol(dual_crit_tune)
 for (n in 2:l){         # Don't plot first col : it is the x axis
-   plot <- dual_crit_tune %>%
-      ggplot(aes_string(x = "Margin", y = names(dual_crit_tune)[n])) + #aes_string allows use of string instead of variable name
-      geom_point() +
-      theme_bw()
+   plot <- SenSpeF1plot(dual_crit_tune, n)
    plotname <- paste0("DCtune", names(dual_crit_tune)[n])   # Concatenate "DCtune" with the column name
    assign(plotname, plot)     # Assign the plot to the train_distrib_colname name
-   rm(plot)    # Clear environment
 }
+rm(l, plot)    # Clear environment
 
-# Define function : Sensitivity, Specificity, F1-Score plot           ####  MARCHE PAS ##########
-SenSpeF1plot <- function(fcn_critlist){
-   l <- ncol(fcn_critlist)
-   for (n in 2:l){
-      plot <- fcn_critlist %>%
-         ggplot(aes_string(x = "Margin", y = names(fcn_critlist)[n])) + #aes_string allows use of string instead of variable name
-         geom_point() +
-         theme_bw()
-      name <- deparse(substitute(fcn_critlist))
-      letter <- str_sub(name, start = 1, end = 1)
-      plotname <- paste0(letter,"c_tune_", names(fcn_critlist)[n])   # Create the plot name
-      assign(plotname, plot)     # Assign the plot to the plot name
-   }
-}
-
-test <- SenSpeF1plot(dual_crit_tune)
 #############################################
 #     DESCRIPTIVE TRAINING SET ANALYSIS     #
 #############################################
@@ -494,7 +479,7 @@ for (n in 2:l){    # Column 1 (class) isn't plotted since it's the fill attribut
    rm(plot)    # Clear environment
 }
 
-# Correlation graphs for some criterias
+# Correlation graphs for a small selection of criterias
 pair_plots <- ggpairs(
    training_set,
    columns = c(2,15,17,10),
@@ -529,11 +514,11 @@ pair_plots <- ggpairs(
 
 
 
-fit_test <- function(fit_model, parameters){
+fit_test <- function(fcn_model, fcn_parameters){
    fitting <- NULL
    prediction <- NULL
    accuracy <- NULL
-   fitting <- train(class ~ ., method = fit_model, data = training_set) # REMPLACER fit_model par "le_modèle" + ajouter paramètres...
+   fitting <- train(class ~ ., method = fcn_model, data = training_set, fcn_parameters) # REMPLACER fit_model par "le_modèle" + ajouter paramètres...
    prediction <- predict(fitting, validation_set, type = "raw")
    accuracy <- confusionMatrix(prediction, validation_set$class)$overall[["Accuracy"]]
    accuracy
@@ -562,6 +547,30 @@ text(fitting$finalModel, cex = .75)
 model_list <- names(getModelInfo())
 
 # http://topepo.github.io/caret/available-models.html
+
+#########################################################
+#     MODEL PERFORMANCE AGAINST THE EVALUATION SET      #
+#########################################################
+
+# Set single list and dual classifiers with optimum margin hyperparameters
+factors_list1aF <- single_crit_search(training_set, factors_list1, as.numeric(best_margin1["Margin"]))
+factors_list2aF <- single_remove(factors_list1aF, factors_list2)
+factors_list2bF <- dual_crit_search(training_set, factors_list2aF, as.numeric(best_margin2["Margin"]))
+criteria_list_evaluation <- crit2string2(factors_list1aF, factors_list2bF)
+rm(factors_list1aF, factors_list2aF, factors_list2bF)
+
+# Set prediction list and run the classifier
+evaluation <- evaluation_set # EVALUATION SET ?
+evaluation$reference <- as.logical(as.character(recode_factor(evaluation$class, edible = TRUE, poisonous = FALSE))) # Switch to logical values
+evaluation <- evaluation %>% mutate(bi_predict = eval(parse(text = criteria_list_evaluation[2])))
+
+# Set .$reference from logical to factor, then compute confusion matrix
+evaluation$reference <- as.factor(evaluation$reference)
+evaluation$bi_predict <- as.factor(evaluation$bi_predict)
+CM_bifinal <- confusionMatrix(data = evaluation$bi_predict, reference = evaluation$reference, positive = "TRUE")
+
+results_biclass <- c(CM_bifinal$byClass["Sensitivity"], CM_bifinal$byClass["Specificity"], CM_bifinal$byClass["F1"])
+results_biclass <- round(results_biclass, 4)
 
 save.image(file = "EKR-mushrooms.RData")
 load("EKR-mushrooms.RData")

@@ -211,7 +211,7 @@ All further classification strategies will be elaborated, tuned and selected on 
 \paragraph*{}
 The first models one can build are simple classifiers that categorize the mushrooms as edible or poisonous, based on one or two criteria.
 \paragraph*{}
-Before training, validation and tuning of the algorithms, a training and validation strategy must be defined. Since these models are designed from scratch, and in order to keep the code simple, a basic train-validation split was chosen, with a 90/10 split ratio between the training and validation sets.
+Before training, validation and tuning of the algorithms, a training and validation strategy must be defined. Since these clasifiers are designed from scratch, and in order to keep the code simple, a basic train-validation split was chosen, with a 90/10 split ratio between the training and validation sets.
 \paragraph*{}
 Once the original dataset is split in training, validation and evaluation sets, one can have a look at the characteristics of the edible and toxic populations and draw conclusions without any risk of overfitting.  
 
@@ -345,8 +345,32 @@ The best result was achieved with $m_{1} =$ `r best_margin1["Margin"]` and $m_{2
 \newpage
 \subsubsection{Caret package models}  
 
+\newpage
 \section{Results}
+\subsection{Evaluation protocol}  
+\paragraph*{}
+All models were trained on the training dataset, set with the best hyperparameters values obtained by evaluating the performance against the validation dataset. Their performance against the evaluation dataset will be analyzed, using the same criteria as before :
 
+1. Specificity *must* be equal to one.
+2. Sensitivity should be the highest possible.
+
+\subsection{Dual criteria classifier performance}  
+\paragraph*{}
+Running the dual criteria classifier against the evaluation dataset yields the following results :
+```{r out.width = "90%", echo = FALSE}
+kable(results_biclass, caption = "Performance of the bi-criteria classifier against the evaluation dataset")
+```
+\paragraph*{}
+The confusion matrix shows more accurately the results : while `r CM_bifinal$table[2,2]` of the `r sum(CM_bifinal$table[,2])` edible specimen were accurately identified, `r CM_bifinal$table[2,1]` non-edible specimen were incorrectly classified as edible.  
+```{r out.width = "90%", echo = FALSE}
+kable(CM_bifinal$table, caption = "Confusion Matrix of the bi-criteria classifier against the evaluation dataset")
+```  
+
+While the model performance is honorable, it is not sufficient to fulfill the specificity criterion, which was the primary endpoint of this study.  
+
+
+
+\subsection{Caret package models}  
 *Section that presents the modeling results and discusses the model performance.*
 
 \newpage
