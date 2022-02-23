@@ -525,7 +525,13 @@ fit_test <- function(fcn_model, fcn_parameters){
 }
 fit_test("lda2", "")
 lda2_param <- c("lda2", "")
-fit_tes(lda2_param)
+
+fit_test(lda2_param[1], lda2_param[2])
+# Modèles :
+# Tree: rpart2, rpartCost, ctree, ctree2
+# Random Forest: rfern, ranger, Rborist
+# Discriminant Analysis : pda, lda,
+# Generalized Additive Model : gamLoess
 # Modèles :
 # Tree: rpart2, rpartCost, ctree, ctree2
 # Random Forest: rfern, ranger, Rborist
