@@ -518,16 +518,24 @@ fit_test <- function(fcn_model, fcn_parameters){
    fitting <- NULL
    prediction <- NULL
    accuracy <- NULL
-   fitting <- train(class ~ ., method = fcn_model, data = training_set, fcn_parameters) # REMPLACER fit_model par "le_modèle" + ajouter paramètres...
+   param <- noquote(fcn_parameters)
+   fitting <- train(class ~ ., method = fcn_model, data = training_set, param)
    prediction <- predict(fitting, validation_set, type = "raw")
    accuracy <- confusionMatrix(prediction, validation_set$class)$overall[["Accuracy"]]
    accuracy
+   plot(fitting)
 }
-fit_test("lda2", "")
-lda2_param <- c("lda2", "tuneGrid=data.frame(dimen = 1)")
+fit_test("lda2", "tuneGrid  = data.frame(dimen = seq(from = 1, to = 2, by = 1))")
+
+lda2_param <- c("lda2", "")
 
 fit_test(lda2_param[1], lda2_param[2])
 
+   fitting <- train(class ~ ., method = "lda2", data = training_set, noquote("tuneGrid  = data.frame(dimen = seq(from = 1, to = 2, by = 1)))")
+   prediction <- predict(fitting, validation_set, type = "raw")
+   accuracy <- confusionMatrix(prediction, validation_set$class)$overall[["Accuracy"]]
+   accuracy
+   plot(fitting)
 
 
 # Modèles :
@@ -535,17 +543,11 @@ fit_test(lda2_param[1], lda2_param[2])
 # Random Forest: rfern, ranger, Rborist
 # Discriminant Analysis : pda, lda
 # Generalized Additive Model : gamLoess
-# Modèles :
-# Tree: rpart2, rpartCost, ctree, ctree2
-# Random Forest: rfern, ranger, Rborist
-# Discriminant Analysis : pda, lda,
-# Generalized Additive Model : gamLoess
 
 #fitting <- train(class ~ ., method = "rpart", tuneGrid  = data.frame(cp = seq(0.005, 0.015, len = 20)), data = training_set)
 fitting <- train(class ~ ., method = "rpart", data = training_set, tuneGrid=data.frame(cp = .012))
 fitting <- train(class ~ ., method = "binda", data = training_set)
 fitting <- train(class ~ ., method = "ranger", data = training_set, num.trees = 5)
-fitting <- train(class ~ stem.root + veil.color + stem.height, method = "knn", data = training_set)
 
 prediction <- predict(fitting, validation_set, type = "raw")
 confusionMatrix(prediction, validation_set$class)$overall[["Accuracy"]]
