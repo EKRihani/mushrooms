@@ -524,13 +524,16 @@ fit_test <- function(fcn_model, fcn_parameters){
    accuracy
 }
 fit_test("lda2", "")
-lda2_param <- c("lda2", "")
+lda2_param <- c("lda2", "tuneGrid=data.frame(dimen = 1)")
 
 fit_test(lda2_param[1], lda2_param[2])
+
+
+
 # Modèles :
 # Tree: rpart2, rpartCost, ctree, ctree2
 # Random Forest: rfern, ranger, Rborist
-# Discriminant Analysis : pda, lda,
+# Discriminant Analysis : pda, lda
 # Generalized Additive Model : gamLoess
 # Modèles :
 # Tree: rpart2, rpartCost, ctree, ctree2
