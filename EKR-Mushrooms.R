@@ -497,46 +497,29 @@ pair_plots <- ggpairs(
 ###################################################
 #     TRAINING SET ANALYSIS WITH CARET MODELS     #
 ###################################################
-
-#https://topepo.github.io/caret/available-models.html
-# fit_test <- function(fit_model){
-# start_time <- Sys.time()   # A SUPPRIMER
-# fitting <- NULL
-# prediction <- NULL
-# accuracy <- NULL
-# fitting <- train(class ~ ., method = fit_model, data = training_set) # REMPLACER fit_model par "le_modèle" + ajouter paramètres...
-# prediction <- predict(fitting, validation_set, type = "raw")
-# accuracy <- confusionMatrix(prediction, validation_set$class)$overall[["Accuracy"]]
-# end_time <- Sys.time()  # A SUPPRIMER
-# time <- difftime(end_time, start_time, units = "secs")  # A SUPPRIMER
-# c(accuracy, time)
-# }
+# https://topepo.github.io/caret/available-models.html
 
 
-
-fit_test <- function(fcn_model, fcn_parameters){
-   fitting <- NULL
-   prediction <- NULL
-   accuracy <- NULL
-   param <- noquote(fcn_parameters)
-   fitting <- train(class ~ ., method = fcn_model, data = training_set, param)
-   prediction <- predict(fitting, validation_set, type = "raw")
-   accuracy <- confusionMatrix(prediction, validation_set$class)$overall[["Accuracy"]]
-   accuracy
-   plot(fitting)
+# Define function : run model with given parameters, evaluate the performance (Specificity), return fitting results
+fit_test <- function(fcn_model){
+   tr_ctrl <- trainControl(classProbs = TRUE, summaryFunction = twoClassSummary)   # Set performance evaluation parameters to twoClassSummary (ROC, Sens, Spec)
+   cmd <- paste0("train(class ~ ., method = '", fcn_model[1], "', data = training_set, trControl = tr_ctrl, metric = 'Spec', ", fcn_model[2],")") # Build command, set performance metric to Specificity
+   fitting <- eval(parse(text = cmd))     # Run command
+   #prediction <- predict(fitting, validation_set, type = "raw")
+   #CM <- confusionMatrix(prediction, validation_set$class)
+   fitting
 }
-fit_test("lda2", "tuneGrid  = data.frame(dimen = seq(from = 1, to = 2, by = 1))")
 
-lda2_param <- c("lda2", "")
+lda2_dim <- c("lda2", "tuneGrid  = data.frame(dimen = seq(from = 1, to = 15, by = 2))")
+rpart2_depth <- c("rpart2", "tuneGrid  = data.frame(maxdepth = seq(from = 1, to = 15, by = 2))")
 
-fit_test(lda2_param[1], lda2_param[2])
+fitting <- fit_test(lda2_dim)
+fitting <- fit_test(rpart2_depth)
+fitting
+plot(fitting)
 
-   fitting <- train(class ~ ., method = "lda2", data = training_set, noquote("tuneGrid  = data.frame(dimen = seq(from = 1, to = 2, by = 1)))")
-   prediction <- predict(fitting, validation_set, type = "raw")
-   accuracy <- confusionMatrix(prediction, validation_set$class)$overall[["Accuracy"]]
-   accuracy
-   plot(fitting)
-
+plot(fitting$finalModel, margin = .05)
+text(fitting$finalModel, cex = .6)
 
 # Modèles :
 # Tree: rpart2, rpartCost, ctree, ctree2
@@ -544,20 +527,9 @@ fit_test(lda2_param[1], lda2_param[2])
 # Discriminant Analysis : pda, lda
 # Generalized Additive Model : gamLoess
 
-#fitting <- train(class ~ ., method = "rpart", tuneGrid  = data.frame(cp = seq(0.005, 0.015, len = 20)), data = training_set)
 fitting <- train(class ~ ., method = "rpart", data = training_set, tuneGrid=data.frame(cp = .012))
-fitting <- train(class ~ ., method = "binda", data = training_set)
-fitting <- train(class ~ ., method = "ranger", data = training_set, num.trees = 5)
-
-prediction <- predict(fitting, validation_set, type = "raw")
-confusionMatrix(prediction, validation_set$class)$overall[["Accuracy"]]
-plot(fitting)
-plot(fitting$finalModel, margin = .1)
-text(fitting$finalModel, cex = .75)
 
 model_list <- names(getModelInfo())
-
-# http://topepo.github.io/caret/available-models.html
 
 #########################################################
 #     MODEL PERFORMANCE AGAINST THE EVALUATION SET      #
