@@ -5,6 +5,7 @@
 # Check and install required libraries
 if(!require(tidyverse)) install.packages("tidyverse", repos = "http://cran.us.r-project.org")
 if(!require(caret)) install.packages("caret", repos = "http://cran.us.r-project.org")
+if(!require(GGally)) install.packages("GGally", repos = "http://cran.us.r-project.org")
 
 # Load required libraries
 library(tidyverse)      # Set of packages used in everyday data analyses
@@ -85,7 +86,7 @@ dataset_names <- row.names(structure_dataset)
 #######################################################################
 
 # Create training/validation (90%) and evaluation (10%) sets
-set.seed(1, sample.kind="Rounding")
+set.seed(1)
 test_index <- createDataPartition(y = dataset$cap.diameter, times = 1, p = 0.1, list = FALSE)
 trainvalid_set <- dataset[-test_index,]
 evaluation_set <- dataset[test_index,]
@@ -93,7 +94,7 @@ evaluation_set <- dataset[test_index,]
 plot_bar(trainvalid_set, by = "class")
 
 # Create training (90%) and validation (10%) sets
-set.seed(1, sample.kind="Rounding")
+set.seed(1)
 test_index <- createDataPartition(y = trainvalid_set$cap.diameter, times = 1, p = 0.1, list = FALSE)
 training_set <- trainvalid_set[-test_index,]
 validation_set <- trainvalid_set[test_index,]
@@ -502,19 +503,72 @@ pair_plots <- ggpairs(
 
 # Define function : run model with given parameters, evaluate the performance (Specificity), return fitting results
 fit_test <- function(fcn_model){
-   tr_ctrl <- trainControl(classProbs = TRUE, summaryFunction = twoClassSummary)   # Set performance evaluation parameters to twoClassSummary (ROC, Sens, Spec)
-   cmd <- paste0("train(class ~ ., method = '", fcn_model[1], "', data = training_set, trControl = tr_ctrl, metric = 'Spec', ", fcn_model[2],")") # Build command, set performance metric to Specificity
+   set.seed(1)
+   tr_ctrl <- trainControl(classProbs = TRUE, summaryFunction = twoClassSummary, method = "cv", number = 10)   # Set performance evaluation parameters to twoClassSummary (ROC, Sens, Spec), with 10-fold cross-validation
+   cmd <- paste0("train(class ~ ., method = '", fcn_model[1], "', data = trainvalid_set, trControl = tr_ctrl, metric = 'Spec', ", fcn_model[2],")") # Build command, set performance metric to Specificity
    fitting <- eval(parse(text = cmd))     # Run command
    #prediction <- predict(fitting, validation_set, type = "raw")
    #CM <- confusionMatrix(prediction, validation_set$class)
    fitting
 }
 
-lda2_dim <- c("lda2", "tuneGrid  = data.frame(dimen = seq(from = 1, to = 15, by = 2))")
-rpart2_depth <- c("rpart2", "tuneGrid  = data.frame(maxdepth = seq(from = 1, to = 15, by = 2))")
+# Discriminant Analysis Models      ### OKAY ###
+set_lda2_dim <- c("lda2", "tuneGrid  = data.frame(dimen = seq(from = 1, to = 16, by = 3))")     ### OK ###
+set_pda_lambda <-  c("pda", "tuneGrid  = data.frame(lambda = seq(from = 1, to = 51, by = 10))")     ### OK ###
+fit_lda2_dim <- fit_test(set_lda2_dim)
+fit_pda_lambda <- fit_test(set_pda_lambda)
 
-fitting <- fit_test(lda2_dim)
-fitting <- fit_test(rpart2_depth)
+# Generalized Additive Model    TROP LONG????
+set_gamLoess_span <-  c("gamLoess", "tuneGrid  = data.frame(span = seq(from = 0, to = 3, by = 0.5), degree = 1)")
+set_gamLoess_degree <-  c("gamLoess", "tuneGrid  = data.frame(degree = seq(from = 0, to = 3, by = 0.5))")
+fit_gamLoess_span <- fit_test(set_gamLoess_span)
+fit_gamLoess_degree <- fit_test(set_gamLoess_degree)
+
+# Tree-based Models      ### OKAY ###  method = 'C5.0Tree' ?
+set_rpart2_depth <- c("rpart2", "tuneGrid  = data.frame(maxdepth = seq(from = 1, to = 16, by = 3))")     ### OK ###
+set_rpartcost_complexity <- c("rpartCost", "tuneGrid  = data.frame(cp = c(0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1), Cost = 1)")     ### OK ###
+set_rpartcost_cost <- c("rpartCost", "tuneGrid  = data.frame(Cost = seq(from = 0.4, to = 2.2, by = 0.3), cp = .05)")     ### OK ###
+set_ctree_criterion <- c("ctree", "tuneGrid  = data.frame(mincriterion = c(0.01, 0.25, 0.5, 0.75, 0.99))")     ### OK ###
+set_c50tree <- c("C5.0Tree", "")
+fit_rpart2_depth <- fit_test(set_rpart2_depth)
+fit_rpartcost_complexity <- fit_test(set_rpartcost_complexity)
+fit_rpartcost_cost <- fit_test(set_rpartcost_cost)
+fit_rpartcost <- fit_test(set_rpartcost)
+fit_ctree_criterion <- fit_test(set_ctree_criterion)
+fit_c50tree <- fit_test(set_c50tree)
+
+
+# Random Forest Models
+set_rFerns_depth <- c("rFerns", "tuneGrid  = data.frame(depth = 2^(1:5)/2)")     ### OK ###
+set_ranger_mtry <- c("ranger", "tuneGrid  = data.frame(mtry = 4^(1:5)/4, splitrule = 'extratrees', min.node.size = 2), num.trees = 2")
+set_ranger_splitrule <- c("ranger", "tuneGrid  = data.frame(splitrule = c('gini', 'extratrees'), mtry = 50, min.node.size = 2), num.trees = 2")
+set_ranger_nodesize <- c("ranger", "tuneGrid  = data.frame(min.node.size = seq(from = 1, to = 15, by = 2), mtry = 50, splitrule = 'extratrees'), num.trees = 2")
+#SAPPLY ! set_ranger_trees <- c("ranger", "tuneGrid  = data.frame(num.trees = seq(from = 1, to = 4, by = 1), mtry = 50, splitrule = 'extratrees', min.node.size = 2)")
+set_Rborist_pred <- c("Rborist", "tuneGrid  = data.frame(predFixed = seq(from = 1, to = 15, by = 2))")
+set_Rborist_minNode <- c("Rborist", "tuneGrid  = data.frame(minNode = seq(from = 1, to = 15, by = 2))")
+fit_rFerns_depth <- fit_test(set_rFerns_depth)
+fit_ranger_mtry <- fit_test(set_ranger_mtry)
+fit_ranger_splitrule <- fit_test(set_ranger_splitrule)
+fit_ranger_nodesize <- fit_test(set_ranger_nodesize)
+#SAPPLY ! fit_ranger_trees <- fit_test(set_ranger_trees)
+
+# A tester ???
+set_ranger <- expand.grid(mtry = 4^(1:5)/4,
+                          splitrule = c('gini', 'extratrees'),
+                          min.node.size = seq(from = 1, to = 15, by = 2)
+)
+####
+trellis.par.set(caretTheme())
+plot(fit_ranger, metric = "Spec", plotType = "level",
+     scales = list(x = list(rot = 90)))
+####
+trellis.par.set(caretTheme())
+plot(fit_ranger, metric = "Kappa")
+####
+ggplot(fit_ranger)
+####
+?plot.train
+
 fitting
 plot(fitting)
 
@@ -522,7 +576,7 @@ plot(fitting$finalModel, margin = .05)
 text(fitting$finalModel, cex = .6)
 
 # Modèles :
-# Tree: rpart2, rpartCost, ctree, ctree2
+# Tree: rpart2, rpartCost, ctree2
 # Random Forest: rfern, ranger, Rborist
 # Discriminant Analysis : pda, lda
 # Generalized Additive Model : gamLoess
