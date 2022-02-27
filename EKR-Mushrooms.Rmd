@@ -63,7 +63,7 @@ csl: https://www.zotero.org/styles/vancouver-superscript
 #- \usepackage{indentfirst} # Indent first line of each paragraph
 ---
 
-```{r setup, include = FALSE}
+```{r setup, include = FALSE, warning=FALSE}
 load("EKR-mushrooms.RData")
 if(!require(ggpubr)) install.packages("ggpubr", repos = "http://cran.us.r-project.org")
 if(!require(rmarkdown)) install.packages("rmarkdown", repos = "http://cran.us.r-project.org")
@@ -161,7 +161,7 @@ The import automatically converted all character variables to factors. The only 
 The primary and secondary *data_meta* files include all information to translate the one-letter variable codes into comprehensible words. However, two variable codes are missing.
 \paragraph*{}
 Firstly, the *stem.root = f* value isn't explained. Since most *f* values for the other categorical stem variables (*stem.surface*, *stem.color*) mean the mushroom has no stem and given the fact that all stem.root = f values are always associated with *stem.surface = f*, *stem.color = f*, *stem.height = 0* and *stem.width = 0*, one can safely assume that *stem.root = f* simply means there is no stem.
-```{r out.width = "90%", echo = FALSE}
+```{r out.width = "100%", echo = FALSE}
 
 kable(uniques_missing_f, caption = "Unique values for stem.root = 'f'")
 ```
@@ -205,7 +205,7 @@ The stem height distribution also looks like a bell curve with a long right tail
 \paragraph*{}
 The stem width distribution looks like a bell curve with a long right tail, and a peak around 10-15 mm. In all three distributions, the right tail can probably be explained by the impossibility to have negative dimensional values.
 
-\subsubsection{Single and dual criteria classifiers}  
+\subsection{Single and dual criteria classifiers}  
 \paragraph*{}
 All further classification strategies will be elaborated, tuned and selected on one rule : the specificity on the edibility criterion must be equal to 1, false negatives are not tolerated. In layman's terms, a good algorithm may reject edible mushrooms but should **never** classify a poisonous one as edible.
 \paragraph*{}
@@ -275,7 +275,7 @@ After the type identification and a filtering step on the two relevant criterias
 The min/max detection is very simply based on the "min" or "max" string found in *factors_listX$typeY*. A *match.fun* function converts the "min" or "max" string into a *min* or *max* function, a *recode.factor* function was used to select the sign (+/-) of the margin. The "min" or "max" string was then concatenated to the computed numeric value, and converted into a > or < symbol, to be used in the evaluation step.
 \paragraph*{}
 
-```{r out.width = "90%", echo = FALSE}
+```{r out.width = "100%", echo = FALSE}
 
 kable(head(relevant_factors2, 15), caption = "15 first relevant factors of the two-criteria classifier")
 ```
@@ -285,14 +285,14 @@ This list will serve as a basis to create a criterion list that merges all crite
 The predicted edibility is then compared to the real edibility value.
 \paragraph*{}
 By construction, the stupid classifier has *Sensitivity =* `r CM_stupid$byClass["Sensitivity"]` and *Specificity = * `r CM_stupid$byClass["Specificity"]`. The relatively good accuracy score (*Accuracy =* `r round(CM_stupid$overall["Accuracy"], 3)`) is indeed misleading, this model actually performs extremely poorly, with a F1 value that cannot be computed by the *confusionMatrix* function, since this model didn't classify correctly any of the edible mushrooms.
-```{r out.width = "90%", echo = FALSE}
+```{r out.width = "100%", echo = FALSE}
 
 kable(CM_stupid$table, caption = "Confusion Matrix for stupid classifier")
 ```
 
 \paragraph*{}
 The single-criterion classifier performance was only marginally better than the stupid classifier's, and achieved *Sens. =* `r round(CM_monocrit$byClass["Sensitivity"], 3)` and *Spec. =* `r round(CM_monocrit$byClass["Specificity"], 3)` for a safety margin set at $m_{2} =$ `r margin1`. The F1 value was poor : *F1 =* `r round(CM_monocrit$byClass["F1"] , 3)`. Of the `r sum(CM_monocrit$table[,2])` edible specimen in the validation set, only `r sum(CM_monocrit$table[2,2])` were recognized as such.
-```{r out.width = "90%", echo = FALSE}
+```{r out.width = "100%", echo = FALSE}
 
 kable(CM_monocrit$table, caption = "Confusion Matrix for single-criterion classifier")
 ```
@@ -301,7 +301,7 @@ Given the poor performance of the single-criterion classifier, the performance o
 *Spec. =* `r round(CM_bicrit$byClass["Specificity"], 3)`, and 
 *F1 =* `r round(CM_bicrit$byClass["F1"],3)`. Of the `r sum(CM_bicrit$table[,2])` edible specimen of the validation set, `r CM_bicrit$table[2,2]` were identified correctly.
 
-```{r out.width = "90%", echo = FALSE}
+```{r out.width = "100%", echo = FALSE}
 
 kable(CM_bicrit$table, caption = "Confusion Matrix for dual-criteria classifier")
 ```
@@ -343,7 +343,75 @@ plot(ggarrange(
 The best result was achieved with $m_{1} =$ `r best_margin1["Margin"]` and $m_{2} =$ `r best_margin2["Margin"]` , which a final performance of $Sens_{2} =$ `r best_margin2["Sensitivity"]` for $Spec_{2} =$ `r best_margin2["Specificity"]`. The specificity constraint does not provide the best F1-score.
 
 \newpage
-\subsubsection{Caret package models}  
+\subsection{Caret package models}  
+The *caret* packages provides a very convenient and efficient platform for data modelling and inference. This section will explain the strategy used for the evaluation of some of these models. The selected models were of various types :  
+* Linear Discriminant Analysis : Linear Discriminant Analysis (lda2), Penalized Discriminant Analysis (pda)
+* Generalized Additive Model : Generalized Additive Model using LOESS (gamLoess)
+* Tree-Based Models : Classification And Regression Tree (CART) (rpart, rpartCost), Conditional Inference Tree (ctree), Single C5.0 Tree (ctree)
+* Random Forest : Random Ferns (rferns), Random Forest (ranger, Rborist)
+
+\paragraph*{}
+The first step was to build a regression and evaluation function. The caret package allows to define it very simply with :
+
+```
+set.seed(1)
+tr_ctrl <- trainControl(classProbs = TRUE, 
+                        summaryFunction = twoClassSummary, 
+                        method = "cv", number = 10)
+train(class ~ ., 
+      method = [METHOD], 
+      data = trainvalid_set, 
+      trControl = tr_ctrl, 
+      metric = 'Spec', 
+      tuneGrid = data.frame([PARAMETERS]))
+```
+The *set.seed* insures reproducibility, the *trainControl* function allows to control various training and evaluation parameters ; in this case, to use a ROC/sensitivity/specificity criterion and a 10-fold cross-validation. The *train* function runs the train and evaluation process, while allowing the use of several parameters, such as the method selection the training/validation set, the metric used for the evaluation and the grid of model parameters.
+\paragraph*{}
+This block was included in a function to allow easy access and reproducibility. The function returns a list that can be plotted and also includes various data of interest, such as .\$results (ROC, Sensibility, Specificity), .\$bestTune (best value with the evaluation metric, Specificity in this case), and .\$finalModel (miscellanous information that can sometimes be plotted, such as trees).
+
+\subsubsection{Linear Discriminant Analysis Models}  
+The two Linear Discriminant Analysis Models selected for this study are lda2 (Linear Discriminant Analysis) and pda (Penalized Discriminant Analysis). The lda2 model has one tuning parameter (*dimen*, number of discriminant functions). The pda model also has a single tuning parameter (*lambda*, shrinkage penalty coefficient).
+```{r, echo = FALSE, fig.height = 3, fig.cap = "Specificity of lda2 (left) and pda (right) models"}
+plot(ggarrange(
+   ncol = 2,
+   ggplot(fit_lda2_dim) + theme_bw(),
+   ggplot(fit_pda_lambda) + theme_bw()
+   )
+)
+```  
+\paragraph*{}
+The *dimen* parameter of the lda2 model does not seem to have much effect on specificity (*Spec =* `r round(mean(fit_lda2_dim$results["Spec"]))`). 
+\paragraph*{}
+The *lambda* parameter of the sda model marginally affects its specificity, with lower lambda values giving sligthly better results ($Spec_max =$ `r round(max(fit_pda_lambda$results["Spec"]))`).
+\paragraph*{}
+However, the specificity of both models are not sufficient for this study.
+
+\subsubsection{Generalized Additive Model}  
+
+A tester puis faire.
+
+\subsubsection{Tree-Based Models}
+\paragraph*{}
+Tree-based models are of special interest in this study, for two main reasons :
+* Tree-based logic is usually used in manual mushrooms classification,
+* Tree models can be plotted and easily understood by humans.
+
+\paragraph*{}
+The first models presented in this study are two CART (Classification And Regression Tree) models. The basic CART model (rpart) has one complexity parameter (cp).
+```{r, echo = FALSE}
+
+kable(round(fit_rpart_cp$results[,1:4],5), caption = "Performance of the CART (rpart) model")
+```
+
+The basic CART model does never achieve the required specificity. However, this model comes close and the tree structure can give some hints about the most important criteria.
+
+```{r, echo = FALSE, fig.cap = "Decision tree for the CART model (cp = 0.02)"}
+plot(fit_rpart_example$finalModel, margin = 0.1)
+text(fit_rpart_example$finalModel, cex = 0.6)
+``` 
+
+
+\subsubsection{Random Forest Models}
 
 \newpage
 \section{Results}
@@ -357,20 +425,21 @@ All models were trained on the training dataset, set with the best hyperparamete
 \subsection{Dual criteria classifier performance}  
 \paragraph*{}
 Running the dual criteria classifier against the evaluation dataset yields the following results :
-```{r out.width = "90%", echo = FALSE}
+```{r out.width = "100%", echo = FALSE}
 kable(results_biclass, caption = "Performance of the bi-criteria classifier against the evaluation dataset")
 ```
 \paragraph*{}
 The confusion matrix shows more accurately the results : while `r CM_bifinal$table[2,2]` of the `r sum(CM_bifinal$table[,2])` edible specimen were accurately identified, `r CM_bifinal$table[2,1]` non-edible specimen were incorrectly classified as edible.  
-```{r out.width = "90%", echo = FALSE}
+```{r out.width = "100%", echo = FALSE}
 kable(CM_bifinal$table, caption = "Confusion Matrix of the bi-criteria classifier against the evaluation dataset")
 ```  
 
 While the model performance is honorable, it is not sufficient to fulfill the specificity criterion, which was the primary endpoint of this study.  
 
 
-
 \subsection{Caret package models}  
+
+
 *Section that presents the modeling results and discusses the model performance.*
 
 \newpage
