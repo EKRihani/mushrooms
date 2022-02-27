@@ -517,6 +517,10 @@ set_lda2_dim <- c("lda2", "tuneGrid  = data.frame(dimen = seq(from = 1, to = 16,
 set_pda_lambda <-  c("pda", "tuneGrid  = data.frame(lambda = seq(from = 1, to = 51, by = 10))")
 fit_lda2_dim <- fit_test(set_lda2_dim)
 fit_pda_lambda <- fit_test(set_pda_lambda)
+da_varimp <- cbind(varImp(fit_lda2_dim)$importance["edible"], 
+                   varImp(fit_pda_lambda)$importance["edible"])
+names(da_varimp) <- c("lda2", "pda")
+da_varimp <- da_varimp %>% arrange(desc(lda2)) %>% round(2) %>% head(10)
 
 # Generalized Additive Model    TROP LONG????
 set_gamLoess_span <-  c("gamLoess", "tuneGrid  = data.frame(span = seq(from = 0.01, to = 1, by = 0.24), degree = 1)")
@@ -529,48 +533,56 @@ fit_gamLoess <- fit_test(c("gamLoess", ""))
 set_rpart_cp <- c("rpart", "tuneGrid  = data.frame(cp = c(1e-5, 1e-4, 1e-3, 1e-2, 5e-2))")
 set_rpartcost_complexity <- c("rpartCost", "tuneGrid  = data.frame(cp = c(1e-5, 1e-4, 1e-3, 1e-2, 0.05), Cost = 1)")
 set_rpartcost_cost <- c("rpartCost", "tuneGrid  = data.frame(Cost = c(0.01, 0.4, 0.7, 1, 1.5, 2, 2.5), cp = .01)")
-set_ctree_criterion <- c("ctree", "tuneGrid  = data.frame(mincriterion = c(0.01, 0.25, 0.5, 0.75, 0.99))")
-set_c50tree <- c("C5.0Tree", "tuneGrid  = data.frame(cp = c(1e-5, 1e-4, 1e-3, 1e-2, 5e-2))")
+#set_ctree_criterion <- c("ctree", "tuneGrid  = data.frame(mincriterion = c(0.01, 0.25, 0.5, 0.75, 0.99))")
+set_c50tree <- c("C5.0Tree", "")
 fit_rpart_cp <- fit_test(set_rpart_cp)
-fit_rpart_example <- fit_test(c("rpart", "tuneGrid  = data.frame(cp = 0.02)"))
+fit_rpart_example <- fit_test(c("rpart", "tuneGrid  = data.frame(cp = 0.014)"))
 fit_rpartcost_complexity <- fit_test(set_rpartcost_complexity)
 fit_rpartcost_cost <- fit_test(set_rpartcost_cost)
-fit_ctree_criterion <- fit_test(set_ctree_criterion)
+
+set_rpartcost_best <- c("rpartCost", paste0("tuneGrid  = data.frame(cp = ", 
+                                            as.numeric(fit_rpartcost_complexity$bestTune['cp']), 
+                                            ", Cost = ", as.numeric(fit_rpartcost_cost$bestTune['Cost']), ")" ))
+fit_rpartcost_best <- fit_test(set_rpartcost_best)
+
+#fit_ctree_criterion <- fit_test(set_ctree_criterion)
 fit_c50tree <- fit_test(set_c50tree)
+
+library(rattle)
+fancyRpartPlot(fit_rpart_example$finalModel, sub ="", type = 3)
 
 # Random Forest Models   ### FAIRE SAPPLY RANGER ###
 set_rFerns_depth <- c("rFerns", "tuneGrid  = data.frame(depth = 2^(1:5)/2)")
-set_ranger_mtry <- c("ranger", "tuneGrid  = data.frame(mtry = seq(from = 1, to = 21, by = 5), splitrule = 'extratrees', min.node.size = 2), num.trees = 2")
-set_ranger_splitrule <- c("ranger", "tuneGrid  = data.frame(splitrule = c('gini', 'extratrees'), mtry = 50, min.node.size = 2), num.trees = 2")
-set_ranger_nodesize <- c("ranger", "tuneGrid  = data.frame(min.node.size = seq(from = 1, to = 15, by = 2), mtry = 50, splitrule = 'extratrees'), num.trees = 2")
-#SAPPLY ! set_ranger_trees <- c("ranger", "tuneGrid  = data.frame(num.trees = seq(from = 1, to = 4, by = 1), mtry = 50, splitrule = 'extratrees', min.node.size = 2)")
+set_ranger_mtry <- c("ranger", "tuneGrid  = data.frame(mtry = seq(from = 1, to = 106, by = 15), splitrule = 'extratrees', min.node.size = 2), num.trees = 6")
+set_ranger_splitrule <- c("ranger", "tuneGrid  = data.frame(splitrule = c('gini', 'extratrees'), mtry = 50, min.node.size = 2), num.trees = 6")
+set_ranger_nodesize <- c("ranger", "tuneGrid  = data.frame(min.node.size = seq(from = 1, to = 15, by = 2), mtry = 50, splitrule = 'extratrees'), num.trees = 6")
+# SAPPLY ! set_ranger_trees <- c("ranger", "tuneGrid  = data.frame(num.trees = seq(from = 1, to = 4, by = 1), mtry = 50, splitrule = 'extratrees', min.node.size = 2)")
 set_Rborist_pred <- c("Rborist", "tuneGrid  = data.frame(predFixed = seq(from = 1, to = 15, by = 2))")
 set_Rborist_minNode <- c("Rborist", "tuneGrid  = data.frame(minNode = seq(from = 1, to = 15, by = 2))")
 fit_rFerns_depth <- fit_test(set_rFerns_depth)
 fit_ranger_mtry <- fit_test(set_ranger_mtry)
 fit_ranger_splitrule <- fit_test(set_ranger_splitrule)
 fit_ranger_nodesize <- fit_test(set_ranger_nodesize)
-#SAPPLY ! fit_ranger_trees <- fit_test(set_ranger_trees)
 
-# For complete factor combination testing (SUPER SLOW) : Compute and Plot
+set_ranger_best <- c("ranger", paste0("tuneGrid  = data.frame(min.node.size = ", 
+                                            as.numeric(fit_ranger_nodesize$bestTune['min.node.size']), 
+                                            ", splitrule = '", as.character(fit_ranger_splitrule$bestTune['splitrule']),
+                                            "', mtry = ", as.numeric(fit_ranger_splitrule$bestTune['mtry']), ")", 
+                                            ", num.trees = 6"))
+fit_ranger_best <- fit_test(set_ranger_best)
 
+# SAPPLY ! fit_ranger_trees <- fit_test(set_ranger_trees)
+
+# For complete factor combinations testing (SUPER SLOW) : Compute and Plot
 # set_ranger <- c("ranger", "tuneGrid = expand.grid(mtry = seq(from = 1, to = 21, by = 5),
 #                                                 splitrule = c('gini', 'extratrees'),
 #                                                 min.node.size = seq(from = 1, to = 16, by = 5)
-#                            )" )
+#                 )" )
 # fit_ranger <- fit_test(set_ranger)
 # trellis.par.set(caretTheme())
 # plot(fit_ranger, metric = "Spec", plotType = "level", scales = list(x = list(rot = 90)))
 # plot(fit_ranger, metric = "Spec")
 # ggplot(fit_ranger)
-
-
-plot(fitting)
-plot(fitting$finalModel, margin = .05)
-text(fitting$finalModel, cex = .6)
-
-
-fitting <- train(class ~ ., method = "rpart", data = training_set, tuneGrid=data.frame(cp = .012))
 
 model_list <- names(getModelInfo())
 
@@ -579,9 +591,9 @@ model_list <- names(getModelInfo())
 #########################################################
 
 # Set single list and dual classifiers with optimum margin hyperparameters
-factors_list1aF <- single_crit_search(training_set, factors_list1, as.numeric(best_margin1["Margin"]))
+factors_list1aF <- single_crit_search(trainvalid_set, factors_list1, as.numeric(best_margin1["Margin"]))
 factors_list2aF <- single_remove(factors_list1aF, factors_list2)
-factors_list2bF <- dual_crit_search(training_set, factors_list2aF, as.numeric(best_margin2["Margin"]))
+factors_list2bF <- dual_crit_search(trainvalid_set, factors_list2aF, as.numeric(best_margin2["Margin"]))
 criteria_list_evaluation <- crit2string2(factors_list1aF, factors_list2bF)
 rm(factors_list1aF, factors_list2aF, factors_list2bF)
 

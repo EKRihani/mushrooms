@@ -347,7 +347,7 @@ The best result was achieved with $m_{1} =$ `r best_margin1["Margin"]` and $m_{2
 The *caret* packages provides a very convenient and efficient platform for data modelling and inference. This section will explain the strategy used for the evaluation of some of these models. The selected models were of various types :  
 * Linear Discriminant Analysis : Linear Discriminant Analysis (lda2), Penalized Discriminant Analysis (pda)
 * Generalized Additive Model : Generalized Additive Model using LOESS (gamLoess)
-* Tree-Based Models : Classification And Regression Tree (CART) (rpart, rpartCost), Conditional Inference Tree (ctree), Single C5.0 Tree (ctree)
+* Tree-Based Models : Classification And Regression Tree (CART) (rpart, rpartCost), Single C5.0 Tree (ctree)
 * Random Forest : Random Ferns (rferns), Random Forest (ranger, Rborist)
 
 \paragraph*{}
@@ -382,7 +382,7 @@ plot(ggarrange(
 \paragraph*{}
 The *dimen* parameter of the lda2 model does not seem to have much effect on specificity (*Spec =* `r round(mean(fit_lda2_dim$results["Spec"]))`). 
 \paragraph*{}
-The *lambda* parameter of the sda model marginally affects its specificity, with lower lambda values giving sligthly better results ($Spec_max =$ `r round(max(fit_pda_lambda$results["Spec"]))`).
+The *lambda* parameter of the sda model marginally affects its specificity, with lower lambda values giving slightly better results ($Spec_max =$ `r round(max(fit_pda_lambda$results["Spec"]))`).
 \paragraph*{}
 However, the specificity of both models are not sufficient for this study.
 
@@ -393,6 +393,7 @@ A tester puis faire.
 \subsubsection{Tree-Based Models}
 \paragraph*{}
 Tree-based models are of special interest in this study, for two main reasons :
+
 * Tree-based logic is usually used in manual mushrooms classification,
 * Tree models can be plotted and easily understood by humans.
 
@@ -403,15 +404,50 @@ The first models presented in this study are two CART (Classification And Regres
 kable(round(fit_rpart_cp$results[,1:4],5), caption = "Performance of the CART (rpart) model")
 ```
 
-The basic CART model does never achieve the required specificity. However, this model comes close and the tree structure can give some hints about the most important criteria.
+The basic CART model does never achieve the required specificity. However, this model comes close.
 
 ```{r, echo = FALSE, fig.cap = "Decision tree for the CART model (cp = 0.02)"}
-plot(fit_rpart_example$finalModel, margin = 0.1)
-text(fit_rpart_example$finalModel, cex = 0.6)
-``` 
+   plot(fit_rpart_example$finalModel)#, margin = 0.1)
+   text(fit_rpart_example$finalModel, cex = 0.6)
+```
 
+```{r, echo = FALSE, fig.cap = "Decision tree skeletton for the final CART model"}
+   plot(fit_rpart_cp$finalModel)
+```
+
+The second CART model used in this study (rpartCost) associates a complexity (*cp*) and a cost (*Cost*) parameters.
+```{r, echo = FALSE, fig.height = 3, fig.cap = "Specificity of rpartCost according to complexity and cost values"}
+plot(ggarrange(
+   ncol = 2,
+   ggplot(fit_rpartcost_complexity) + scale_x_log10() + theme_bw(),
+   ggplot(fit_rpartcost_cost) + theme_bw()
+   )
+)
+```
+The best predicted specificity would be achieved with *cp =* `r fit_rpartcost_complexity$bestTune['cp']` and *Cost = * `r fit_rpartcost_cost$bestTune['Cost']`.
+```{r, echo = FALSE}
+
+kable(round(fit_rpartcost_best$results[,c(1:2,4:5)],5), caption = "Performance of the CART (rpartCost) model")
+```
+The performance, while very good, did not achieve the specificity criterion.
+
+\paragraph*{}
+The last tree-based models was the c5.0tree. This model doesn't have any tuning parameter.
+
+```{r, echo = FALSE}
+
+kable(round(fit_c50tree$results[,1:4],5), caption = "Performance of the C5.0 Tree (C5.0Tree) model")
+```
+Quite interestingly, despite have no tuning parameter, this model gave excellent and veri balanced results, with both very high sensitivity and specificity. Still, this model didn't achieve the *Spec = 1* criterion.
 
 \subsubsection{Random Forest Models}
+The Random Ferns (rFerns) model has only one parameter : depth.
+```{r, echo = FALSE, fig.height = 3, fig.cap = "Specificity of Random Ferns model"}
+ggplot(fit_rFerns_depth) + theme_bw()
+
+```  
+While pretty fast, the Random Ferns Model yielded disappointing results, with a maximum specificity of only ($Spec_max =$ `r round(max(fit_rFerns_depth$results["Spec"]))`). The maximum sensitivity wasn't very high either. ($Sens_max =$ `r round(max(fit_rFerns_depth$results["Sens"]))`).
+
 
 \newpage
 \section{Results}
@@ -434,7 +470,7 @@ The confusion matrix shows more accurately the results : while `r CM_bifinal$tab
 kable(CM_bifinal$table, caption = "Confusion Matrix of the bi-criteria classifier against the evaluation dataset")
 ```  
 
-While the model performance is honorable, it is not sufficient to fulfill the specificity criterion, which was the primary endpoint of this study.  
+While the model performance is quite honorable, it is not sufficient to fulfill the specificity criterion, which was the primary endpoint of this study.  
 
 
 \subsection{Caret package models}  
