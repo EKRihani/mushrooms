@@ -375,7 +375,7 @@ The two Linear Discriminant Analysis Models selected for this study are lda2 (Li
 plot(ggarrange(
    ncol = 2,
    ggplot(fit_lda2_dim) + theme_bw(),
-   ggplot(fit_pda_lambda) + theme_bw()
+   ggplot(fit_pda_lambda) +  ylab("") + theme_bw()
    )
 )
 ```  
@@ -438,7 +438,7 @@ The last tree-based models was the c5.0tree. This model doesn't have any tuning 
 
 kable(round(fit_c50tree$results[,1:4],5), caption = "Performance of the C5.0 Tree (C5.0Tree) model")
 ```
-Quite interestingly, despite have no tuning parameter, this model gave excellent and veri balanced results, with both very high sensitivity and specificity. Still, this model didn't achieve the *Spec = 1* criterion.
+Quite interestingly, despite have no tuning parameter, this model gave excellent and very balanced results, with both very high sensitivity and specificity. Still, this model didn't achieve the *Spec = 1* criterion.
 
 \subsubsection{Random Forest Models}
 The Random Ferns (rFerns) model has only one parameter : depth.
@@ -447,6 +447,18 @@ ggplot(fit_rFerns_depth) + theme_bw()
 
 ```  
 While pretty fast, the Random Ferns Model yielded disappointing results, with a maximum specificity of only ($Spec_max =$ `r round(max(fit_rFerns_depth$results["Spec"]))`). The maximum sensitivity wasn't very high either. ($Sens_max =$ `r round(max(fit_rFerns_depth$results["Sens"]))`).
+
+The second random forest model is the ranger model. This model has three tuning parameters :
+
+```{r, echo = FALSE, fig.height = 2.5, fig.cap = "Ranger model specificity"}
+plot(ggarrange(
+   ncol = 3,
+   fit_ranger_mtry + scale_y_log10(),
+   fit_ranger_splitrule + ylab(""),
+   fit_ranger_nodesize + ylab("")
+   )
+)
+```
 
 
 \newpage

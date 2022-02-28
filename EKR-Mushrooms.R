@@ -20,8 +20,7 @@ datafile <- tempfile()
 download.file(URL, datafile)
 datafile <- unzip(datafile, "MushroomDataset/secondary_data.csv")
 dataset <- read.csv(datafile, header = TRUE, sep = ";")
-
-#rm(datafile)      # Clean environment
+rm(URL, datafile)      # Clean environment
 
 ################################
 #  DATA FORMATTING / CLEANING  #
@@ -115,7 +114,10 @@ for (n in 1:l){
    plotname <- paste0("study_distrib_", dataset_names[n])   # Concatenate "plot_distrib" with the column name
    assign(plotname, plot)     # Assign the plot to the plot_distrib_colname name
 }
-
+rm(study_distrib_cap.color, study_distrib_cap.shape, study_distrib_cap.surface, study_distrib_class, study_distrib_does.bruise.or.bleed, 
+   study_distrib_gill.attachment, study_distrib_gill.color, study_distrib_gill.spacing, study_distrib_habitat, study_distrib_has.ring,
+   study_distrib_ring.type, study_distrib_season, study_distrib_spore.print.color, study_distrib_stem.color, study_distrib_stem.root, 
+   study_distrib_stem.surface, study_distrib_veil.color, study_distrib_veil.type) # If short on RAM (not used in report)
 
 ########################################################
 #     SIMPLE CLASSIFICATION MODEL : CRITERIA LISTS     #
