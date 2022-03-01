@@ -6,11 +6,29 @@
 if(!require(tidyverse)) install.packages("tidyverse", repos = "http://cran.us.r-project.org")
 if(!require(caret)) install.packages("caret", repos = "http://cran.us.r-project.org")
 if(!require(GGally)) install.packages("GGally", repos = "http://cran.us.r-project.org")
+if(!require(MASS)) install.packages("MASS", repos = "http://cran.us.r-project.org")
+if(!require(mda)) install.packages("mda", repos = "http://cran.us.r-project.org")
+if(!require(rpart)) install.packages("rpart", repos = "http://cran.us.r-project.org")
+if(!require(plyr)) install.packages("plyr", repos = "http://cran.us.r-project.org")
+if(!require(C50)) install.packages("C50", repos = "http://cran.us.r-project.org")
+if(!require(party)) install.packages("party", repos = "http://cran.us.r-project.org")
+if(!require(ranger)) install.packages("ranger", repos = "http://cran.us.r-project.org")
+if(!require(e1071)) install.packages("e1071", repos = "http://cran.us.r-project.org")
+if(!require(rFerns)) install.packages("rFerns", repos = "http://cran.us.r-project.org")
 
 # Load required libraries
 library(tidyverse)      # Set of packages used in everyday data analyses
-library(caret)          # Set of packages for machine learning
 library(GGally)         # Correlation plots (pairs)
+library(caret)          # Tools for machine learning
+library(MASS)           # Linear Discriminant Analysis (lda2)
+library(mda)            # Penalized Discriminant Analysis (pda)
+library(rpart)          # Classification And Regression Tree (rpart, rpartCost)
+library(plyr)           # Needed for rpartCost
+library(C50)            # C5.0 models (c50tree)
+library(party)          # Conditional Inference Tree (ctree)
+library(ranger)         # Random Forest, fast implementation (ranger)
+library(e1071)          # Needed for ranger
+library(rFerns)         # Random Ferns (rFerns)
 
 # Get, decompress, import data file
 URL <- "https://archive.ics.uci.edu/ml/machine-learning-databases/00615/MushroomDataset.zip"
@@ -516,10 +534,11 @@ gc()
 fit_test <- function(fcn_model){
    set.seed(1)
    tr_ctrl <- trainControl(classProbs = TRUE, summaryFunction = twoClassSummary, method = "cv", number = 10)   # Set performance evaluation parameters to twoClassSummary (ROC, Sens, Spec), with 10-fold cross-validation
-   cmd <- paste0("train(class ~ ., method = '", fcn_model[1], "', data = trainvalid_set, trControl = tr_ctrl, metric = 'Spec', ", fcn_model[2],")") # Build command, set performance metric to Specificity
+   cmd <- paste0("train(class ~ ., method = '", 
+                        fcn_model[1], 
+                        "', data = trainvalid_set, trControl = tr_ctrl, metric = 'Spec', ", 
+                        fcn_model[2],")") # Build command, set performance metric to Specificity
    fitting <- eval(parse(text = cmd))     # Run command
-   #prediction <- predict(fitting, validation_set, type = "raw")
-   #CM <- confusionMatrix(prediction, validation_set$class)
    fitting
 }
 
@@ -631,13 +650,13 @@ gc()
 # ggplot(fit_ranger)
 
 
-# Variable Importance
-da_varimp <- cbind(varImp(fit_lda2_dim)$importance["edible"], 
-                   varImp(fit_pda_lambda)$importance["edible"])
-names(da_varimp) <- c("lda2", "pda")
-da_varimp <- da_varimp %>% arrange(desc(lda2)) %>% round(2) %>% head(10)
-
-model_list <- names(getModelInfo())
+# # Variable Importance
+# da_varimp <- cbind(varImp(fit_lda2_dim)$importance["edible"], 
+#                    varImp(fit_pda_lambda)$importance["edible"])
+# names(da_varimp) <- c("lda2", "pda")
+# da_varimp <- da_varimp %>% arrange(desc(lda2)) %>% round(2) %>% head(10)
+# 
+# model_list <- names(getModelInfo())
 
 #########################################################
 #     MODEL PERFORMANCE AGAINST THE EVALUATION SET      #
