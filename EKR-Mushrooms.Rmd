@@ -374,15 +374,15 @@ The two Linear Discriminant Analysis Models selected for this study are lda2 (Li
 ```{r, echo = FALSE, fig.height = 3, fig.cap = "Specificity of lda2 (left) and pda (right) models"}
 plot(ggarrange(
    ncol = 2,
-   ggplot(fit_lda2_dim) + theme_bw(),
-   ggplot(fit_pda_lambda) +  ylab("") + theme_bw()
+   fit_lda2_dim_plot + theme_bw(),
+   fit_pda_lambda_plot +  ylab("") + theme_bw()
    )
 )
 ```  
 \paragraph*{}
-The *dimen* parameter of the lda2 model does not seem to have much effect on specificity (*Spec =* `r round(mean(fit_lda2_dim$results["Spec"]))`). 
+The *dimen* parameter of the lda2 model does not seem to have much effect on specificity (*Spec =* `r round(mean(fit_lda2_dim_results["Spec"]))`). 
 \paragraph*{}
-The *lambda* parameter of the sda model marginally affects its specificity, with lower lambda values giving slightly better results ($Spec_max =$ `r round(max(fit_pda_lambda$results["Spec"]))`).
+The *lambda* parameter of the sda model marginally affects its specificity, with lower lambda values giving slightly better results ($Spec_max =$ `r round(max(fit_pda_lambda_results["Spec"]))`).
 \paragraph*{}
 However, the specificity of both models are not sufficient for this study.
 
@@ -399,6 +399,7 @@ Tree-based models are of special interest in this study, for two main reasons :
 
 \paragraph*{}
 The first models presented in this study are two CART (Classification And Regression Tree) models. The basic CART model (rpart) has one complexity parameter (cp).
+
 ```{r, echo = FALSE}
 
 kable(round(fit_rpart_cp$results[,1:4],5), caption = "Performance of the CART (rpart) model")
@@ -419,12 +420,12 @@ The second CART model used in this study (rpartCost) associates a complexity (*c
 ```{r, echo = FALSE, fig.height = 3, fig.cap = "Specificity of rpartCost according to complexity and cost values"}
 plot(ggarrange(
    ncol = 2,
-   ggplot(fit_rpartcost_complexity) + scale_x_log10() + theme_bw(),
-   ggplot(fit_rpartcost_cost) + theme_bw()
+   fit_rpartcost_complexity_plot + scale_x_log10() + theme_bw(),
+   fit_rpartcost_cost_plot + theme_bw()
    )
 )
 ```
-The best predicted specificity would be achieved with *cp =* `r fit_rpartcost_complexity$bestTune['cp']` and *Cost = * `r fit_rpartcost_cost$bestTune['Cost']`.
+The best predicted specificity would be achieved with *cp =* `r fit_rpartcost_complexity_bestTune['cp']` and *Cost = * `r fit_rpartcost_cost_bestTune['Cost']`.
 ```{r, echo = FALSE}
 
 kable(round(fit_rpartcost_best$results[,c(1:2,4:5)],5), caption = "Performance of the CART (rpartCost) model")
@@ -435,31 +436,31 @@ The performance, while very good, did not achieve the specificity criterion.
 The last tree-based models was the c5.0tree. This model doesn't have any tuning parameter.
 
 ```{r, echo = FALSE}
-
-kable(round(fit_c50tree$results[,1:4],5), caption = "Performance of the C5.0 Tree (C5.0Tree) model")
+kable(round(fit_c50tree_results[,2:4],5), caption = "Performance of the C5.0 Tree (C5.0Tree) model")
 ```
 Quite interestingly, despite have no tuning parameter, this model gave excellent and very balanced results, with both very high sensitivity and specificity. Still, this model didn't achieve the *Spec = 1* criterion.
 
 \subsubsection{Random Forest Models}
 The Random Ferns (rFerns) model has only one parameter : depth.
-```{r, echo = FALSE, fig.height = 3, fig.cap = "Specificity of Random Ferns model"}
-ggplot(fit_rFerns_depth) + theme_bw()
 
-```  
-While pretty fast, the Random Ferns Model yielded disappointing results, with a maximum specificity of only ($Spec_max =$ `r round(max(fit_rFerns_depth$results["Spec"]))`). The maximum sensitivity wasn't very high either. ($Sens_max =$ `r round(max(fit_rFerns_depth$results["Sens"]))`).
+```{r, echo = FALSE, fig.height = 3, fig.cap = "Specificity of Random Ferns model"}
+fit_rFerns_depth_plot + theme_bw()
+
+```
+
+While pretty fast, the Random Ferns Model yielded disappointing results, with a maximum specificity of only ($Spec_max =$ `r round(max(fit_rFerns_depth_results["Spec"]))`). The maximum sensitivity wasn't very high either. ($Sens_max =$ `r round(max(fit_rFerns_depth_results["Sens"]))`).
 
 The second random forest model is the ranger model. This model has three tuning parameters :
 
 ```{r, echo = FALSE, fig.height = 2.5, fig.cap = "Ranger model specificity"}
 plot(ggarrange(
    ncol = 3,
-   fit_ranger_mtry + scale_y_log10(),
-   fit_ranger_splitrule + ylab(""),
-   fit_ranger_nodesize + ylab("")
+   fit_ranger_mtry_plot + scale_y_log10() + theme_bw(),
+   fit_ranger_splitrule_plot + ylab("") + theme_bw(),
+   fit_ranger_nodesize_plot + ylab("") + theme_bw()
    )
 )
 ```
-
 
 \newpage
 \section{Results}
@@ -474,12 +475,12 @@ All models were trained on the training dataset, set with the best hyperparamete
 \paragraph*{}
 Running the dual criteria classifier against the evaluation dataset yields the following results :
 ```{r out.width = "100%", echo = FALSE}
-kable(results_biclass, caption = "Performance of the bi-criteria classifier against the evaluation dataset")
+kable(results_biclass, caption = "Performance of the bi-criteria classifier (vs. evaluation)")
 ```
 \paragraph*{}
 The confusion matrix shows more accurately the results : while `r CM_bifinal$table[2,2]` of the `r sum(CM_bifinal$table[,2])` edible specimen were accurately identified, `r CM_bifinal$table[2,1]` non-edible specimen were incorrectly classified as edible.  
 ```{r out.width = "100%", echo = FALSE}
-kable(CM_bifinal$table, caption = "Confusion Matrix of the bi-criteria classifier against the evaluation dataset")
+kable(CM_bifinal$table, caption = "Confusion Matrix of the bi-criteria classifier (vs. evaluation)")
 ```  
 
 While the model performance is quite honorable, it is not sufficient to fulfill the specificity criterion, which was the primary endpoint of this study.  
