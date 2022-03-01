@@ -344,7 +344,8 @@ The best result was achieved with $m_{1} =$ `r best_margin1["Margin"]` and $m_{2
 
 \newpage
 \subsection{Caret package models}  
-The *caret* packages provides a very convenient and efficient platform for data modelling and inference. This section will explain the strategy used for the evaluation of some of these models. The selected models were of various types :  
+The *caret* packages provides a very convenient and efficient platform for data modelling and inference. This section will explain the strategy used for the evaluation of some of these models. The selected models were of various types :
+
 * Linear Discriminant Analysis : Linear Discriminant Analysis (lda2), Penalized Discriminant Analysis (pda)
 * Generalized Additive Model : Generalized Additive Model using LOESS (gamLoess)
 * Tree-Based Models : Classification And Regression Tree (CART) (rpart, rpartCost), Single C5.0 Tree (ctree)

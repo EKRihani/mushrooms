@@ -3,32 +3,23 @@
 ##########################
 
 # Check and install required libraries
-if(!require(tidyverse)) install.packages("tidyverse", repos = "http://cran.us.r-project.org")
-if(!require(caret)) install.packages("caret", repos = "http://cran.us.r-project.org")
-if(!require(GGally)) install.packages("GGally", repos = "http://cran.us.r-project.org")
-if(!require(MASS)) install.packages("MASS", repos = "http://cran.us.r-project.org")
-if(!require(mda)) install.packages("mda", repos = "http://cran.us.r-project.org")
-if(!require(rpart)) install.packages("rpart", repos = "http://cran.us.r-project.org")
-if(!require(plyr)) install.packages("plyr", repos = "http://cran.us.r-project.org")
-if(!require(C50)) install.packages("C50", repos = "http://cran.us.r-project.org")
-if(!require(party)) install.packages("party", repos = "http://cran.us.r-project.org")
-if(!require(ranger)) install.packages("ranger", repos = "http://cran.us.r-project.org")
-if(!require(e1071)) install.packages("e1071", repos = "http://cran.us.r-project.org")
-if(!require(rFerns)) install.packages("rFerns", repos = "http://cran.us.r-project.org")
+if(!require(plyr)) install.packages("plyr", repos = "http://cran.us.r-project.org")            # Needed for rpartCost
+if(!require(MASS)) install.packages("MASS", repos = "http://cran.us.r-project.org")            # Linear Discriminant Analysis (lda2)
+if(!require(caret)) install.packages("caret", repos = "http://cran.us.r-project.org")          # Tools for machine learning
+if(!require(GGally)) install.packages("GGally", repos = "http://cran.us.r-project.org")        # Correlation plots (pairs)
+if(!require(mda)) install.packages("mda", repos = "http://cran.us.r-project.org")              # Penalized Discriminant Analysis (pda)
+if(!require(rpart)) install.packages("rpart", repos = "http://cran.us.r-project.org")          # Classification And Regression Tree (rpart, rpartCost)
+if(!require(C50)) install.packages("C50", repos = "http://cran.us.r-project.org")              # C5.0 models (c50tree)
+if(!require(party)) install.packages("party", repos = "http://cran.us.r-project.org")          # Conditional Inference Tree (ctree)
+if(!require(ranger)) install.packages("ranger", repos = "http://cran.us.r-project.org")        # Random Forest, fast implementation (ranger)
+if(!require(e1071)) install.packages("e1071", repos = "http://cran.us.r-project.org")          # Needed for ranger
+if(!require(rFerns)) install.packages("rFerns", repos = "http://cran.us.r-project.org")        # Random Ferns (rFerns)
+if(!require(tidyverse)) install.packages("tidyverse", repos = "http://cran.us.r-project.org")  # Set of packages used in everyday data analyses
 
 # Load required libraries
-library(tidyverse)      # Set of packages used in everyday data analyses
-library(GGally)         # Correlation plots (pairs)
-library(caret)          # Tools for machine learning
-library(MASS)           # Linear Discriminant Analysis (lda2)
-library(mda)            # Penalized Discriminant Analysis (pda)
-library(rpart)          # Classification And Regression Tree (rpart, rpartCost)
-library(plyr)           # Needed for rpartCost
-library(C50)            # C5.0 models (c50tree)
-library(party)          # Conditional Inference Tree (ctree)
-library(ranger)         # Random Forest, fast implementation (ranger)
-library(e1071)          # Needed for ranger
-library(rFerns)         # Random Ferns (rFerns)
+library(tidyverse)
+library(GGally)
+library(caret)
 
 # Get, decompress, import data file
 URL <- "https://archive.ics.uci.edu/ml/machine-learning-databases/00615/MushroomDataset.zip"
