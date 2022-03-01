@@ -20,7 +20,15 @@ datafile <- tempfile()
 download.file(URL, datafile)
 datafile <- unzip(datafile, "MushroomDataset/secondary_data.csv")
 dataset <- read.csv(datafile, header = TRUE, sep = ";")
-#rm(URL, datafile)      # Clean environment if low on RAM
+
+# Define function : return object size in Kb
+obj_size <- function(fcn_object){
+   object <- eval(parse(text = fcn_object))
+   size <- format(object.size(object), units = "Mb")
+   size <- str_remove(size, " Mb")
+   size <- as.numeric(size)
+   size
+}
 
 ################################
 #  DATA FORMATTING / CLEANING  #
@@ -491,6 +499,21 @@ pair_plots <- ggpairs(
    ggplot2::aes(color = class)
 )
 
+# Get all object sizes and clean environment (objects not used in the following steps or in the report)
+object_list <- objects() 
+sizes_list1 <- sapply(X = object_list, FUN = obj_size)
+
+rm(URL, datafile)
+rm(dataset)
+rm(study_distrib_cap.color, study_distrib_cap.shape, study_distrib_cap.surface, study_distrib_class, study_distrib_does.bruise.or.bleed, 
+   study_distrib_gill.attachment, study_distrib_gill.color, study_distrib_gill.spacing, study_distrib_habitat, study_distrib_has.ring,
+   study_distrib_ring.type, study_distrib_season, study_distrib_spore.print.color, study_distrib_stem.color, study_distrib_stem.root, 
+   study_distrib_stem.surface, study_distrib_veil.color, study_distrib_veil.type)
+rm(train_distrib_cap.color, train_distrib_cap.shape, train_distrib_cap.surface, train_distrib_does.bruise.or.bleed, 
+   train_distrib_gill.attachment, train_distrib_gill.spacing, train_distrib_has.ring, train_distrib_ring.type, train_distrib_season, 
+   train_distrib_stem.color, train_distrib_stem.root, train_distrib_stem.surface, train_distrib_veil.type)
+
+
 ###################################################
 #     TRAINING SET ANALYSIS WITH CARET MODELS     #
 ###################################################
@@ -650,7 +673,15 @@ obj_size <- function(fcn_object){
    size
 }
 
-# Get objects list, compute sizes, return top 15 values. 
+# Define function : get objects list, compute sizes, return top 15 values.
+obj_allsizes <- function(){
+   object_list <- objects() 
+   sizes_list <- sapply(X = object_list, FUN = obj_size)
+   sizes_list <- as.data.frame(sizes_list, stringsAsFactors=FALSE)
+   sizes_list <- cbind(rownames(sizes_list), data.frame(sizes_list, row.names=NULL))
+   sizes_list
+}
+
 object_list <- objects() 
 sizes_list <- sapply(X = object_list, FUN = obj_size)
 sizes_list <- as.data.frame(sizes_list, stringsAsFactors=FALSE)
