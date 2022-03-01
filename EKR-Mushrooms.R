@@ -21,7 +21,7 @@ download.file(URL, datafile)
 datafile <- unzip(datafile, "MushroomDataset/secondary_data.csv")
 dataset <- read.csv(datafile, header = TRUE, sep = ";")
 
-# Define function : return object size in Kb
+# Define function : return object size in Mb
 obj_size <- function(fcn_object){
    object <- eval(parse(text = fcn_object))
    size <- format(object.size(object), units = "Mb")
@@ -119,10 +119,6 @@ for (n in 1:l){
    plotname <- paste0("study_distrib_", dataset_names[n])   # Concatenate "plot_distrib" with the column name
    assign(plotname, plot)     # Assign the plot to the plot_distrib_colname name
 }
-#rm(study_distrib_cap.color, study_distrib_cap.shape, study_distrib_cap.surface, study_distrib_class, study_distrib_does.bruise.or.bleed, 
-#   study_distrib_gill.attachment, study_distrib_gill.color, study_distrib_gill.spacing, study_distrib_habitat, study_distrib_has.ring,
-#   study_distrib_ring.type, study_distrib_season, study_distrib_spore.print.color, study_distrib_stem.color, study_distrib_stem.root, 
-#   study_distrib_stem.surface, study_distrib_veil.color, study_distrib_veil.type) # Clean environment if low on RAM (plots not used in report)
 
 ########################################################
 #     SIMPLE CLASSIFICATION MODEL : CRITERIA LISTS     #
@@ -479,10 +475,6 @@ for (n in 2:l){    # Column 1 (class) isn't plotted since it's the fill attribut
    plotname <- paste0("train_distrib_",dataset_names[n])   # Concatenate "train_distrib" with the column name
    assign(plotname, plot)     # Assign the plot to the train_distrib_colname name
 }
-# rm(train_distrib_cap.color, train_distrib_cap.shape, train_distrib_cap.surface, train_distrib_does.bruise.or.bleed, 
-#    train_distrib_gill.attachment, train_distrib_gill.spacing, train_distrib_has.ring, train_distrib_ring.type, train_distrib_season, 
-#    train_distrib_stem.color, train_distrib_stem.root, train_distrib_stem.surface, train_distrib_veil.type) # Clean environment if low on RAM (plots not used in final report)
-
 
 # Correlation graphs for a small selection of criterias
 pair_plots <- ggpairs(
@@ -502,7 +494,6 @@ pair_plots <- ggpairs(
 # Get all object sizes and clean environment (objects not used in the following steps or in the report)
 object_list <- objects() 
 sizes_list1 <- sapply(X = object_list, FUN = obj_size)
-
 rm(URL, datafile)
 rm(dataset)
 rm(study_distrib_cap.color, study_distrib_cap.shape, study_distrib_cap.surface, study_distrib_class, study_distrib_does.bruise.or.bleed, 
@@ -512,7 +503,8 @@ rm(study_distrib_cap.color, study_distrib_cap.shape, study_distrib_cap.surface, 
 rm(train_distrib_cap.color, train_distrib_cap.shape, train_distrib_cap.surface, train_distrib_does.bruise.or.bleed, 
    train_distrib_gill.attachment, train_distrib_gill.spacing, train_distrib_has.ring, train_distrib_ring.type, train_distrib_season, 
    train_distrib_stem.color, train_distrib_stem.root, train_distrib_stem.surface, train_distrib_veil.type)
-
+rm(plot, test_index, half1_list2, half2_list2)
+gc()
 
 ###################################################
 #     TRAINING SET ANALYSIS WITH CARET MODELS     #
@@ -536,12 +528,12 @@ set_lda2_dim <- c("lda2", "tuneGrid  = data.frame(dimen = seq(from = 1, to = 16,
 set_pda_lambda <-  c("pda", "tuneGrid  = data.frame(lambda = seq(from = 1, to = 51, by = 10))")
 fit_lda2_dim <- fit_test(set_lda2_dim)
 fit_pda_lambda <- fit_test(set_pda_lambda)
-# Extract results of interest and clean environment (trains will be deleted later)
+# Extract results of interest
 fit_lda2_dim_plot <- ggplot(fit_lda2_dim)
 fit_lda2_dim_results <- fit_lda2_dim$results
 fit_pda_lambda_plot <- ggplot(fit_pda_lambda)
 fit_pda_lambda_results <- fit_pda_lambda$results
-#rm(fit_lda2_dim, fit_pda_lambda)      # Clean environment if low on RAM
+
 
 # # Generalized Additive Model    TROP LONG????
 # set_gamLoess_span <-  c("gamLoess", "tuneGrid  = data.frame(span = seq(from = 0.01, to = 1, by = 0.24), degree = 1)")
@@ -562,7 +554,8 @@ fit_rpartcost_complexity <- fit_test(set_rpartcost_complexity)
 fit_rpartcost_cost <- fit_test(set_rpartcost_cost)
 fit_ctree_criterion <- fit_test(set_ctree_criterion)
 fit_c50tree <- fit_test(set_c50tree)
-# Extract results of interest and clean environment (trains will be deleted later)
+
+# Extract results of interest and clean environment
 fit_rpartcost_complexity_plot <- ggplot(fit_rpartcost_complexity)
 fit_rpartcost_complexity_results <- fit_rpartcost_complexity$results
 fit_rpartcost_complexity_bestTune <- fit_rpartcost_complexity$bestTune
@@ -572,12 +565,18 @@ fit_rpartcost_cost_bestTune <- fit_rpartcost_cost$bestTune
 fit_ctree_criterion_plot <- ggplot(fit_ctree_criterion_cost)
 fit_ctree_criterion_results <- fit_ctree_criterion$results
 fit_c50tree_results <- fit_c50tree$results
-#rm(fit_rpart_cp, fit_rpartcost_complexity, fit_rpartcost_cost, fit_ctree_criterion, fit_c50tree)      # Clean environment if low on RAM
 
 set_rpartcost_best <- c("rpartCost", paste0("tuneGrid  = data.frame(cp = ", 
                                             fit_rpartcost_complexity$bestTune$cp, 
                                             ", Cost = ", fit_rpartcost_cost$bestTune$Cost, ")" ))
 fit_rpartcost_best <- fit_test(set_rpartcost_best)
+
+# Get object list sizes and clean environment
+object_list <- objects() 
+sizes_list2 <- sapply(X = object_list, FUN = obj_size)
+rm(fit_lda2_dim, set_pda_lambda)
+rm(fit_rpart_cp, fit_rpartcost_complexity, fit_rpartcost_cost, fit_ctree_criterion, fit_c50tree)      # Clean environment if low on RAM
+gc()
 
 # library(rattle) #????
 # fancyRpartPlot(fit_rpart_example$finalModel, sub ="", type = 3)
@@ -604,7 +603,6 @@ fit_ranger_splitrule_plot <- ggplot(fit_ranger_splitrule)
 fit_ranger_splitrule_results <- fit_ranger_splitrule$results
 fit_ranger_nodesize_plot <- ggplot(fit_ranger_nodesize)
 fit_ranger_nodesize_results <- fit_ranger_nodesize$results
-#rm(fit_rFerns_depth, fit_ranger_mtry, fit_ranger_splitrule, fit_ranger_nodesize)      # Clean environment if low on RAM
 
 set_ranger_best <- c("ranger", paste0("tuneGrid  = data.frame(min.node.size = ", 
                                             fit_ranger_nodesize$bestTune$min.node.size, 
@@ -612,6 +610,12 @@ set_ranger_best <- c("ranger", paste0("tuneGrid  = data.frame(min.node.size = ",
                                             "', mtry = ", fit_ranger_splitrule$bestTune$mtry, ")", 
                                             ", num.trees = 10"))
 fit_ranger_best <- fit_test(set_ranger_best)
+
+# Get object list sizes and clean environment
+object_list <- objects() 
+sizes_list3 <- sapply(X = object_list, FUN = obj_size)
+rm(fit_rFerns_depth, fit_ranger_mtry, fit_ranger_splitrule, fit_ranger_nodesize)
+gc()
 
 # SAPPLY ! fit_ranger_trees <- fit_test(set_ranger_trees)
 
@@ -659,50 +663,20 @@ results_biclass <- c(CM_bifinal$byClass["Sensitivity"], CM_bifinal$byClass["Spec
 results_biclass <- round(results_biclass, 4)
 
 
-###############################
-#     MEMORY OPTIMIZATION     #
-###############################
-# /!\ Will not give accurate results if rm() functions were used before /!\
+#############################
+#     MEMORY OCCUPATION     #
+#############################
 
-# Define function : return size in Kb
-obj_size <- function(fcn_object){
-   object <- eval(parse(text = fcn_object))
-   size <- format(object.size(object), units = "Mb")
-   size <- str_remove(size, " Mb")
-   size <- as.numeric(size)
-   size
-}
-
-# Define function : get objects list, compute sizes, return top 15 values.
-obj_allsizes <- function(){
-   object_list <- objects() 
-   sizes_list <- sapply(X = object_list, FUN = obj_size)
-   sizes_list <- as.data.frame(sizes_list, stringsAsFactors=FALSE)
-   sizes_list <- cbind(rownames(sizes_list), data.frame(sizes_list, row.names=NULL))
-   sizes_list
-}
-
+# Get object list sizes
 object_list <- objects() 
-sizes_list <- sapply(X = object_list, FUN = obj_size)
-sizes_list <- as.data.frame(sizes_list, stringsAsFactors=FALSE)
+sizes_list4 <- sapply(X = object_list, FUN = obj_size)
+sizes_list <- c(sizes_list1, sizes_list2, sizes_list3, sizes_list4)  # Get all object list sizes gathered during the study
+sizes_list <- sizes_list[!duplicated(names(sizes_list))]             # Remove all duplicates
+sizes_list <- t(data.frame(as.list(sizes_list)))
 sizes_list <- cbind(rownames(sizes_list), data.frame(sizes_list, row.names=NULL))
 sizes_list <- sizes_list[order(-sizes_list$sizes_list),]
 names(sizes_list) <- c("object", "size (Mb)")
-sizes_list <- head(sizes_list, 30)
-
-
-# Clean environment (global)
-rm(URL, datafile)
-rm(dataset)
-rm(study_distrib_cap.color, study_distrib_cap.shape, study_distrib_cap.surface, study_distrib_class, study_distrib_does.bruise.or.bleed, 
-   study_distrib_gill.attachment, study_distrib_gill.color, study_distrib_gill.spacing, study_distrib_habitat, study_distrib_has.ring,
-   study_distrib_ring.type, study_distrib_season, study_distrib_spore.print.color, study_distrib_stem.color, study_distrib_stem.root, 
-   study_distrib_stem.surface, study_distrib_veil.color, study_distrib_veil.type)
-rm(train_distrib_cap.color, train_distrib_cap.shape, train_distrib_cap.surface, train_distrib_does.bruise.or.bleed, 
-   train_distrib_gill.attachment, train_distrib_gill.spacing, train_distrib_has.ring, train_distrib_ring.type, train_distrib_season, 
-   train_distrib_stem.color, train_distrib_stem.root, train_distrib_stem.surface, train_distrib_veil.type)
-rm(factors_list1aF, factors_list2aF, factors_list2bF)
-rm(fit_rFerns_depth, fit_ranger_mtry, fit_ranger_splitrule, fit_ranger_nodesize)
+top30_sizes <- head(sizes_list, 30)
 
 save.image(file = "EKR-mushrooms.RData")
 load("EKR-mushrooms.RData")
