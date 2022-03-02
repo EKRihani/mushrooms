@@ -609,15 +609,18 @@ fit_rFerns_depth_plot <- ggplot(fit_rFerns_depth)
 fit_rFerns_depth_results <- fit_rFerns_depth$results
 fit_ranger_mtry_plot <- ggplot(fit_ranger_mtry)
 fit_ranger_mtry_results <- fit_ranger_mtry$results
+fit_ranger_mtry_bestTune <- fit_ranger_mtry$bestTune
 fit_ranger_splitrule_plot <- ggplot(fit_ranger_splitrule)
 fit_ranger_splitrule_results <- fit_ranger_splitrule$results
+fit_ranger_splitrule_bestTune <- fit_ranger_splitrule$bestTune
 fit_ranger_nodesize_plot <- ggplot(fit_ranger_nodesize)
 fit_ranger_nodesize_results <- fit_ranger_nodesize$results
+fit_ranger_nodesize_bestTune <- fit_ranger_nodesize$bestTune
 
 set_ranger_best <- c("ranger", paste0("tuneGrid  = data.frame(min.node.size = ", 
-                                            fit_ranger_nodesize$bestTune$min.node.size, 
-                                            ", splitrule = '", fit_ranger_splitrule$bestTune$splitrule,
-                                            "', mtry = ", fit_ranger_splitrule$bestTune$mtry, ")", 
+                                            fit_ranger_nodesize_bestTune$min.node.size, 
+                                            ", splitrule = '", fit_ranger_splitrule_bestTune$splitrule,
+                                            "', mtry = ", fit_ranger_splitrule_bestTune$mtry, ")", 
                                             ", num.trees = 10"))
 fit_ranger_best <- fit_test(set_ranger_best)
 fit_ranger_best_results <- fit_ranger_best$results

@@ -385,7 +385,7 @@ The *dimen* parameter of the lda2 model does not seem to have much effect on spe
 \paragraph*{}
 The *lambda* parameter of the sda model marginally affects its specificity, with lower lambda values giving slightly better results ($Spec_max =$ `r round(max(fit_pda_lambda_results["Spec"]))`).
 \paragraph*{}
-However, the specificity of both models are not sufficient for this study.
+However, the specificity of both models are far from being sufficient for this study ($Spec \approx$ `r round(mean(c(fit_lda2_dim_results$Spec, fit_pda_lambda_results$Spec)),2)`), and their sensitivity don't seem to be much higher than the basic 2-criteria model ($Sens \approx$ `r round(mean(c(fit_lda2_dim_results$Sens, fit_pda_lambda_results$Sens)),2)`).
 
 \subsubsection{Generalized Additive Model}  
 
@@ -406,12 +406,13 @@ The first models presented in this study are two CART (Classification And Regres
 kable(round(fit_rpart_cp_results[,1:4],5), caption = "Performance of the CART (rpart) model")
 ```
 
-The basic CART model does never achieve the required specificity. However, this model comes close.
+The basic CART model does never achieve the required specificity. However, this model still comes close and gives excellent results ($Sens_{max} =$ `r round(max(fit_rpart_cp_results["Sens"]),3)`, $Spec_{max} =$ `r round(max(fit_rpart_cp_results["Spec"]),3)`).
 
 ```{r, echo = FALSE, fig.cap = "Decision tree for the CART model (cp = 0.02)"}
    fit_rpart_example_tree #plot(fit_rpart_example$finalModel, margin = 0.1)
    fit_rpart_example_text #text(fit_rpart_example$finalModel, cex = 0.6)
 ```
+
 
 ```{r, echo = FALSE, fig.cap = "Decision tree skeleton for the final CART model"}
    plot(fit_rpart_cp_tree)
@@ -449,7 +450,7 @@ fit_rFerns_depth_plot + theme_bw()
 
 ```
 
-While pretty fast, the Random Ferns Model yielded disappointing results, with a maximum specificity of only ($Spec_{max} =$ `r round(max(fit_rFerns_depth_results["Spec"]))`). The maximum sensitivity wasn't very high either. ($Sens_{max} =$ `r round(max(fit_rFerns_depth_results["Sens"]))`).
+While pretty fast, the Random Ferns Model yielded disappointing results, with a maximum specificity of only ($Spec_{max} =$ `r round(max(fit_rFerns_depth_results["Spec"]), 3)`). The maximum sensitivity wasn't very high either ($Sens_{max} =$ `r round(max(fit_rFerns_depth_results["Sens"]), 3)`). Both metrics were inferior to the basic 2-criteria model ones.
 
 The second random forest model is the ranger model. This model has three tuning parameters :
 
@@ -462,9 +463,17 @@ plot(ggarrange(
    )
 )
 ```
+The preliminary tuning step showed very promising results : the required specificity was already achieved on several occurrences single-parameter tuning. With optimal parameters (*min.node.size* = `r fit_ranger_nodesize_bestTune$min.node.size`, *mtry* = `r fit_ranger_splitrule_bestTune$mtry` *splitrule* = `r fit_ranger_splitrule_bestTune$splitrule`).
+
+```{r, echo = FALSE}
+kable(round(fit_ranger_best_results, 6), caption = "Performance of the Ranger model with optimal settings")
+```
+This model achieved excellent results, giving perfect specificity and sensitivity in this evaluation phase.
+\paragraph*{}
+This result underlines an interesting fact : not all random forest are created equal. In preliminary studies, some random forest models proved to be extremely slow, some were considerably faster. This study also shows the considerable difference in sensitivity and specificity between the rFerns and the Ranger random forest models.
 
 \subsection{Memory Optimization}
-During the building of this study, an unforeseen and unfortunate event resulted into the addition of a secondary goal : the code had to be able to handle a `r summary_number` $\times$ `r nrow(structure_dataset)` dataset and run on lower-end computers, with only 4GB RAM + 4GB swap. Memory optimization was an interesting challenge, and implied :
+During the building of this study, an unforeseen and unfortunate event resulted into the addition of a secondary goal : the code had to be able to handle a `r summary_number` $\times$ `r nrow(structure_dataset)` dataset and run on lower-end computers, with only 4GB RAM + 6GB swap. Memory optimization was an interesting challenge, and implied :
 
 * Identification and removal of obsolete intermediate values,
 * Identification and removal of objects that won't be used in the final report,
@@ -522,13 +531,19 @@ kable(CM_bifinal$table, caption = "Confusion Matrix of the bi-criteria classifie
 While the model performance is quite honorable, it is not sufficient to fulfill the specificity criterion, which was the primary endpoint of this study.  
 
 
-\subsection{Caret package models}  
+\subsection{Ranger random forest performance}  
 
 
 *Section that presents the modeling results and discusses the model performance.*
 
 \newpage
 \section{Conclusion}
+
+Species identification is a classic classification task, usually performed by humans using a classification tree strategy. 
+\paragraph*{}
+This study showed that given particular selection conditions imposed by circumstances (toxic mushrooms shouldn't be classified as edible, i.e. *Specificity* = 1), a significant amount of modelling strategies were giving insufficient results, and proved to be inferior to even the most basic *ad-hoc* bi-criteria classification models.
+\paragraph*{}
+
 
 *Section that gives a brief summary of the report, its limitations and future work*
 
