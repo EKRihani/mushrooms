@@ -674,6 +674,14 @@ CM_bifinal <- confusionMatrix(data = evaluation$bi_predict, reference = evaluati
 results_biclass <- c(CM_bifinal$byClass["Sensitivity"], CM_bifinal$byClass["Specificity"], CM_bifinal$byClass["F1"])
 results_biclass <- round(results_biclass, 4)
 
+# Bi-classifier performance comparison table : validation vs evaluation
+bi_perf_comp <- rbind(best_margin2[2:4], results_biclass)
+rownames(bi_perf_comp) <- c("Evaluation", "Validation")
+
+cmd <- paste0("train(class ~ ., method = 'ranger', data = trainvalid_set,", set_ranger_best[2]) # Build command
+fit_ranger_final <- eval(parse(text = cmd))     # Run command
+pred_ranger_final <- predict(object = fit_ranger_final, newdata = evaluation_set)
+CM_ranger_final <- confusionMatrix(data = pred_ranger_final, reference = evaluation_set$class)
 
 #############################
 #     MEMORY OCCUPATION     #
