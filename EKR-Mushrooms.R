@@ -533,7 +533,7 @@ fit_test <- function(fcn_model){
    fitting
 }
 
-# Discriminant Analysis Models      ### OKAY ###
+# Discriminant Analysis Models
 set_lda2_dim <- c("lda2", "tuneGrid  = data.frame(dimen = seq(from = 1, to = 16, by = 3))")
 set_pda_lambda <-  c("pda", "tuneGrid  = data.frame(lambda = seq(from = 1, to = 51, by = 10))")
 fit_lda2_dim <- fit_test(set_lda2_dim)
@@ -637,13 +637,12 @@ gc()
 #                                                 min.node.size = seq(from = 1, to = 16, by = 5)
 #                 )" )
 # fit_ranger <- fit_test(set_ranger)
-# trellis.par.set(caretTheme())
 # plot(fit_ranger, metric = "Spec", plotType = "level", scales = list(x = list(rot = 90)))
 # plot(fit_ranger, metric = "Spec")
 # ggplot(fit_ranger)
 
 
-# # Variable Importance
+# Variable Importance
 # da_varimp <- cbind(varImp(fit_lda2_dim)$importance["edible"], 
 #                    varImp(fit_pda_lambda)$importance["edible"])
 # names(da_varimp) <- c("lda2", "pda")
@@ -678,10 +677,14 @@ results_biclass <- round(results_biclass, 4)
 bi_perf_comp <- rbind(best_margin2[2:4], results_biclass)
 rownames(bi_perf_comp) <- c("Evaluation", "Validation")
 
-cmd <- paste0("train(class ~ ., method = 'ranger', data = trainvalid_set,", set_ranger_best[2]) # Build command
+
+cmd <- paste0("train(class ~ ., method = 'ranger', data = trainvalid_set,", set_ranger_best[2], ")") # Build command
 fit_ranger_final <- eval(parse(text = cmd))     # Run command
 pred_ranger_final <- predict(object = fit_ranger_final, newdata = evaluation_set)
 CM_ranger_final <- confusionMatrix(data = pred_ranger_final, reference = evaluation_set$class)
+results_ranger <- c(CM_ranger_final$byClass["Sensitivity"], CM_ranger_final$byClass["Specificity"], CM_ranger_final$byClass["F1"])
+results_ranger <- round(results_ranger, 4)
+
 
 #############################
 #     MEMORY OCCUPATION     #

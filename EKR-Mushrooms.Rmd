@@ -466,7 +466,7 @@ plot(ggarrange(
 The preliminary tuning step showed very promising results : the required specificity was already achieved on several occurrences single-parameter tuning. With optimal parameters (*min.node.size* = `r fit_ranger_nodesize_bestTune$min.node.size`, *mtry* = `r fit_ranger_splitrule_bestTune$mtry` *splitrule* = `r fit_ranger_splitrule_bestTune$splitrule`).
 
 ```{r, echo = FALSE}
-kable(round(fit_ranger_best_results, 6), caption = "Performance of the Ranger model with optimal settings")
+kable(fit_ranger_best_results[1:6], caption = "Performance of the Ranger model with optimal settings")
 ```
 This model achieved excellent results, giving perfect specificity and sensitivity in this evaluation phase.
 \paragraph*{}
@@ -503,7 +503,7 @@ kable(head(sizes_list,30), caption = "Size of the 30 largest objects")
 
 Some of these objects are quite large, but can fortunately be converted into smaller and still useful objects. 
 \paragraph*{}
-For example, the *very* large rFerns fit object (`r sizes_list %>% filter(object == "fit_rFerns_depth") %>% select("size (Mb)") %>% round` Mb) can be split into two useful objects that gather the metrics of interest : the fitting plot (`r format(object.size(fit_rFerns_depth_plot), units = "kb")`) and the results (`r format(object.size(fit_rFerns_depth_results), units = "kb")`) table.
+For example, the *very* large rFerns fit object (`r sizes_list %>% filter(object == "fit_rFerns_depth") %>% select("size (Mb)") %>% round` Mb) can be split into two useful objects that gather the metrics of interest : the fitting plot (`r format(object.size(fit_rFerns_depth_plot), units = "KB")`) and the results (`r format(object.size(fit_rFerns_depth_results), units = "KB")`) table.
 \paragraph*{}
 Periodic data-gathering and object deletion also permitted to avoid memory creep and R crashes.
 
@@ -536,18 +536,29 @@ kable(bi_perf_comp, caption = "Comparison of performance metrics of the bi-crite
 The performance difference does not seem to be significant, and the lower specificity just seems to be a result of a trade-off between sensitivity and specificity. The absence of significant overfitting can also be confirmed by the slight increase of the F1 score during the validation stage.
 
 \subsection{Ranger random forest performance}  
+The final evaluation of the Ranger model yielded the following results :
+```{r out.width = "100%", echo = FALSE}
+kable(results_ranger, caption = "Performance of the Ranger model (vs. evaluation)")
+```
 
+And gave the following confusion matrix.
+
+```{r out.width = "100%", echo = FALSE}
+kable(CM_ranger_final$table, caption = "Confusion Matrix of the Ranger model (vs. evaluation)")
+```  
+The final accuracy was equal to `r CM_ranger_final$overall["Accuracy"]`, with a 95% confidence interval of [`r round(CM_ranger_final$overall["AccuracyLower"], 4)`; `r round(CM_ranger_final$overall["AccuracyUpper"], 4)`]. The ranger model provided excellent results, in a very reasonable amount of time.
 
 *Section that presents the modeling results and discusses the model performance.*
 
 \newpage
 \section{Conclusion}
 
-Species identification is a classic classification task, usually performed by humans using a classification tree strategy. 
+Species identification is a classic classification task, traditionnally performed by humans using a classification tree strategy. 
 \paragraph*{}
 This study showed that given particular selection conditions imposed by circumstances (toxic mushrooms shouldn't be classified as edible, i.e. *Specificity* = 1), a significant amount of modelling strategies were giving insufficient results, and proved to be inferior to even a quite basic *ad-hoc* bi-criteria classification model.
 \paragraph*{}
-This bi-criteria model, while already quite efficient (*Sens* = `r round(results_biclass["Sensitivity"], 3)`, *Spec* = `r round(results_biclass["Specificity"], 3)`, *F1* = `r round(results_biclass["F1"], 3)`) did not fully achieve the specificity requirement.
+This bi-criteria model, while already quite efficient (*Sens* = `r round(results_biclass["Sensitivity"], 3)`, *Spec* = `r round(results_biclass["Specificity"], 3)`, *F1* = `r round(results_biclass["F1"], 3)`) did not fully achieve the specificity requirement against the evaluation dataset.
+\paragraph*{}
 
 *Section that gives a brief summary of the report, its limitations and future work*
 
