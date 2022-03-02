@@ -545,14 +545,13 @@ fit_pda_lambda_plot <- ggplot(fit_pda_lambda)
 fit_pda_lambda_results <- fit_pda_lambda$results
 
 
-# # Generalized Additive Model    TROP LONG????
-# set_gamLoess_span <-  c("gamLoess", "tuneGrid  = data.frame(span = seq(from = 0.01, to = 1, by = 0.24), degree = 1)")
-# set_gamLoess_degree <-  c("gamLoess", "tuneGrid  = data.frame(degree = seq(from = 0.1, to = 1, by = 0.4), span = 0.5)")
-# fit_gamLoess_span <- fit_test(set_gamLoess_span)
-# fit_gamLoess_degree <- fit_test(set_gamLoess_degree)
-# fit_gamLoess <- fit_test(c("gamLoess", ""))
+# Generalized Additive Model
+set_gamLoess_span <-  c("gamLoess", "tuneGrid  = data.frame(span = seq(from = 0.01, to = 1, by = 0.24), degree = 1)")
+set_gamLoess_degree <-  c("gamLoess", "tuneGrid  = data.frame(degree = c(0, 1), span = 0.5)")
+fit_gamLoess_span <- fit_test(set_gamLoess_span)
+fit_gamLoess_degree <- fit_test(set_gamLoess_degree)
 
-# Tree-based Models      ### OKAY ###
+# Tree-based Models
 set_rpart_cp <- c("rpart", "tuneGrid  = data.frame(cp = c(1e-5, 1e-4, 1e-3, 1e-2, 5e-2))")
 set_rpartcost_complexity <- c("rpartCost", "tuneGrid  = data.frame(cp = c(1e-5, 1e-4, 1e-3, 1e-2, 0.05), Cost = 1)")
 set_rpartcost_cost <- c("rpartCost", "tuneGrid  = data.frame(Cost = c(0.01, 0.4, 0.7, 1, 1.5, 2, 2.5), cp = .01)")
@@ -565,7 +564,11 @@ fit_rpartcost_cost <- fit_test(set_rpartcost_cost)
 fit_ctree_criterion <- fit_test(set_ctree_criterion)
 fit_c50tree <- fit_test(set_c50tree)
 
-# Extract results of interest and clean environment
+# Extract results of interest
+fit_rpart_cp_tree <- plot(fit_rpart_cp$finalModel)
+fit_rpart_cp_results <- fit_rpart_cp$results
+fit_rpart_example_tree <- plot(fit_rpart_example$finalModel, margin = 0.1)
+fit_rpart_example_text <- text(fit_rpart_example$finalModel, cex = 0.6)
 fit_rpartcost_complexity_plot <- ggplot(fit_rpartcost_complexity)
 fit_rpartcost_complexity_results <- fit_rpartcost_complexity$results
 fit_rpartcost_complexity_bestTune <- fit_rpartcost_complexity$bestTune
@@ -580,23 +583,20 @@ set_rpartcost_best <- c("rpartCost", paste0("tuneGrid  = data.frame(cp = ",
                                             fit_rpartcost_complexity$bestTune$cp, 
                                             ", Cost = ", fit_rpartcost_cost$bestTune$Cost, ")" ))
 fit_rpartcost_best <- fit_test(set_rpartcost_best)
+fit_rpartcost_best_results <- fit_rpartcost_best$results
 
 # Get object list sizes and clean environment
 object_list <- objects() 
 sizes_list2 <- sapply(X = object_list, FUN = obj_size)
 rm(fit_lda2_dim, set_pda_lambda)
-rm(fit_rpart_cp, fit_rpartcost_complexity, fit_rpartcost_cost, fit_ctree_criterion, fit_c50tree)      # Clean environment if low on RAM
+rm(fit_rpartcost_complexity, fit_rpartcost_cost, fit_rpart_cp, fit_rpart_example, fit_ctree_criterion, fit_c50tree, fit_rpartcost_best)
 gc()
 
-# library(rattle) #????
-# fancyRpartPlot(fit_rpart_example$finalModel, sub ="", type = 3)
-
-# Random Forest Models   ### FAIRE SAPPLY RANGER ###
+# Random Forest Models
 set_rFerns_depth <- c("rFerns", "tuneGrid  = data.frame(depth = 2^(1:5)/2)")
 set_ranger_mtry <- c("ranger", "tuneGrid  = data.frame(mtry = seq(from = 1, to = 106, by = 15), splitrule = 'extratrees', min.node.size = 2), num.trees = 6")
 set_ranger_splitrule <- c("ranger", "tuneGrid  = data.frame(splitrule = c('gini', 'extratrees'), mtry = 50, min.node.size = 2), num.trees = 6")
 set_ranger_nodesize <- c("ranger", "tuneGrid  = data.frame(min.node.size = seq(from = 1, to = 15, by = 2), mtry = 50, splitrule = 'extratrees'), num.trees = 6")
-# SAPPLY ??? set_ranger_trees <- c("ranger", "tuneGrid  = data.frame(num.trees = seq(from = 1, to = 4, by = 1), mtry = 50, splitrule = 'extratrees', min.node.size = 2)")
 set_Rborist_pred <- c("Rborist", "tuneGrid  = data.frame(predFixed = seq(from = 1, to = 15, by = 2))")
 set_Rborist_minNode <- c("Rborist", "tuneGrid  = data.frame(minNode = seq(from = 1, to = 15, by = 2))")
 fit_rFerns_depth <- fit_test(set_rFerns_depth)
@@ -620,14 +620,13 @@ set_ranger_best <- c("ranger", paste0("tuneGrid  = data.frame(min.node.size = ",
                                             "', mtry = ", fit_ranger_splitrule$bestTune$mtry, ")", 
                                             ", num.trees = 10"))
 fit_ranger_best <- fit_test(set_ranger_best)
+fit_ranger_best_results <- fit_ranger_best$results
 
 # Get object list sizes and clean environment
 object_list <- objects() 
 sizes_list3 <- sapply(X = object_list, FUN = obj_size)
-rm(fit_rFerns_depth, fit_ranger_mtry, fit_ranger_splitrule, fit_ranger_nodesize)
+rm(fit_rFerns_depth, fit_ranger_mtry, fit_ranger_splitrule, fit_ranger_nodesize, fit_ranger_best)
 gc()
-
-# SAPPLY ! fit_ranger_trees <- fit_test(set_ranger_trees)
 
 # For complete factor combinations testing (SUPER SLOW) : Compute and Plot
 # set_ranger <- c("ranger", "tuneGrid = expand.grid(mtry = seq(from = 1, to = 21, by = 5),
@@ -686,7 +685,6 @@ sizes_list <- t(data.frame(as.list(sizes_list)))
 sizes_list <- cbind(rownames(sizes_list), data.frame(sizes_list, row.names=NULL))
 sizes_list <- sizes_list[order(-sizes_list$sizes_list),]
 names(sizes_list) <- c("object", "size (Mb)")
-top30_sizes <- head(sizes_list, 30)
 
 save.image(file = "EKR-mushrooms.RData")
 load("EKR-mushrooms.RData")

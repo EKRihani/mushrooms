@@ -75,8 +75,7 @@ library(rmarkdown)
 library(knitr)
 library(tidyverse)
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, fig.pos = "!H")
-knitr::write_bib(c("tidyverse", "rmarkdown", "knitr", "ggpubr"), "packages.bib")
-#knitr::write_bib(c("tidyverse", "caret", "data.table", "reshape2", "ggplot2", "recommenderlab", "stringr", "ggpubr", "rmarkdown", "knitr"), "packages.bib")
+knitr::write_bib(c("tidyverse", "caret",  "rmarkdown", "GGally", "plyr", "MASS", "mda", "rpart", "C50", "party", "ranger", "e1071", "rFerns", "knitr", "ggpubr"), "packages.bib")
 ```
 \newpage
 \section{Overview}
@@ -137,7 +136,8 @@ This dataset contains the data from n = `r summary_number` mushrooms (rows). Eac
 \section{Methods and Analysis}
 \subsection{Computer and R configuration}
 \paragraph*{}
-The code and report were run on a Xubuntu Linux 20.04 LTS system, with R 3.6.3 and the following packages : tidyverse[@R-tidyverse] (v1.3.1), caret[@-caret] (v6.0-88), ggpubr[@R-ggpubr] (v0.4.0), rmarkdown[@R-rmarkdown] (v2.11), knitr[@R-knitr] (v1.34).
+The code and report were run on a Xubuntu Linux 20.04 LTS system, with R 3.6.3 and the following packages : tidyverse[@R-tidyverse] (v1.3.1), caret[@R-caret] (v6.0-88), GGally[@R-GGally] (v2.1.2), MASS[@R-MASS] (v7.3-51.5), mda[@R-mda] (v0.4-10), rpart[@R-rpart] (v4.1-15), plyr[@R-plyr] (v1.8.5), C50[@R-C50] (v0.1.5), party[@R-party] (v1.3-9), ranger[@R-ranger] (v0.13.1), e1071[@R-e1071] (v1.7-9), rFerns[@R-rFerns] (v5.0.0), ggpubr[@R-ggpubr] (v0.4.0), rmarkdown[@R-rmarkdown] (v2.11), knitr[@R-knitr] (v1.34).
+
 \paragraph*{}
 The code was also tested on a Windows 7 x64 computer on R 4.1.0. It was not tested on any Mac OS system.
 \subsection{Data preparation and cleaning}
@@ -146,7 +146,7 @@ The dataset is directly downloaded from the UCI database in zip format and unzip
 
 * *primary_data.csv* : the csv file with all data used for creating the base. One line for each of the 173 species.
 * *primary_data_meta.txt* : metadata for the primary dataset.
-* *secondary_data.csv* : the final dataset, made of all  `r summary_number` specimen.
+* *secondary_data.csv* : the final dataset, made of all `r summary_number` specimen.
 * *secondary_data_meta.txt* : metadata for the secondary dataset.
 
 \paragraph*{}
@@ -403,18 +403,18 @@ The first models presented in this study are two CART (Classification And Regres
 
 ```{r, echo = FALSE}
 
-kable(round(fit_rpart_cp$results[,1:4],5), caption = "Performance of the CART (rpart) model")
+kable(round(fit_rpart_cp_results[,1:4],5), caption = "Performance of the CART (rpart) model")
 ```
 
 The basic CART model does never achieve the required specificity. However, this model comes close.
 
 ```{r, echo = FALSE, fig.cap = "Decision tree for the CART model (cp = 0.02)"}
-   plot(fit_rpart_example$finalModel)#, margin = 0.1)
-   text(fit_rpart_example$finalModel, cex = 0.6)
+   fit_rpart_example_tree #plot(fit_rpart_example$finalModel, margin = 0.1)
+   fit_rpart_example_text #text(fit_rpart_example$finalModel, cex = 0.6)
 ```
 
-```{r, echo = FALSE, fig.cap = "Decision tree skeletton for the final CART model"}
-   plot(fit_rpart_cp$finalModel)
+```{r, echo = FALSE, fig.cap = "Decision tree skeleton for the final CART model"}
+   plot(fit_rpart_cp_tree)
 ```
 
 The second CART model used in this study (rpartCost) associates a complexity (*cp*) and a cost (*Cost*) parameters.
@@ -429,7 +429,7 @@ plot(ggarrange(
 The best predicted specificity would be achieved with *cp =* `r fit_rpartcost_complexity_bestTune['cp']` and *Cost = * `r fit_rpartcost_cost_bestTune['Cost']`.
 ```{r, echo = FALSE}
 
-kable(round(fit_rpartcost_best$results[,c(1:2,4:5)],5), caption = "Performance of the CART (rpartCost) model")
+kable(round(fit_rpartcost_best_results[,c(1:2,4:5)],5), caption = "Performance of the CART (rpartCost) model")
 ```
 The performance, while very good, did not achieve the specificity criterion.
 
@@ -439,7 +439,7 @@ The last tree-based models was the c5.0tree. This model doesn't have any tuning 
 ```{r, echo = FALSE}
 kable(round(fit_c50tree_results[,2:4],5), caption = "Performance of the C5.0 Tree (C5.0Tree) model")
 ```
-Quite interestingly, despite have no tuning parameter, this model gave excellent and very balanced results, with both very high sensitivity and specificity. Still, this model didn't achieve the *Spec = 1* criterion.
+Quite interestingly, despite have no tuning parameter, this model gave excellent and very balanced results out of the box, with both very high sensitivity and specificity. Still, this model didn't achieve the required *Spec* = 1 criterion.
 
 \subsubsection{Random Forest Models}
 The Random Ferns (rFerns) model has only one parameter : depth.
@@ -449,7 +449,7 @@ fit_rFerns_depth_plot + theme_bw()
 
 ```
 
-While pretty fast, the Random Ferns Model yielded disappointing results, with a maximum specificity of only ($Spec_max =$ `r round(max(fit_rFerns_depth_results["Spec"]))`). The maximum sensitivity wasn't very high either. ($Sens_max =$ `r round(max(fit_rFerns_depth_results["Sens"]))`).
+While pretty fast, the Random Ferns Model yielded disappointing results, with a maximum specificity of only ($Spec_{max} =$ `r round(max(fit_rFerns_depth_results["Spec"]))`). The maximum sensitivity wasn't very high either. ($Sens_{max} =$ `r round(max(fit_rFerns_depth_results["Sens"]))`).
 
 The second random forest model is the ranger model. This model has three tuning parameters :
 
@@ -462,6 +462,41 @@ plot(ggarrange(
    )
 )
 ```
+
+\subsection{Memory Optimization}
+During the building of this study, an unforeseen and unfortunate event resulted into the addition of a secondary goal : the code had to be able to handle a `r summary_number` $\times$ `r nrow(structure_dataset)` dataset and run on lower-end computers, with only 4GB RAM + 4GB swap. Memory optimization was an interesting challenge, and implied :
+
+* Identification and removal of obsolete intermediate values,
+* Identification and removal of objects that won't be used in the final report,
+* Identification and replacement of large objects,
+* Periodic garbage collection.
+
+The identification of large objects can be performed by the following code :
+
+```
+object_list <- objects()
+
+obj_size <- function(fcn_object){
+   object <- eval(parse(text = fcn_object))
+   size <- format(object.size(object), units = "Mb")
+   size <- str_remove(size, " Mb")
+   size <- as.numeric(size)
+   size
+
+size_list <- sapply(X = object_list, FUN = obj_size)
+```
+The resulting vector can then be converted to a data frame, that returns the size of all objects :
+
+```{r, echo = FALSE}
+
+kable(head(sizes_list,30), caption = "Size of the 30 largest objects")
+```
+
+Some of these objects are quite large, but can fortunately be converted into smaller and still useful objects. 
+\paragraph*{}
+For example, the *very* large rFerns fit object (`r sizes_list %>% filter(object == "fit_rFerns_depth") %>% select("size (Mb)") %>% round` Mb) can be split into two useful objects that gather the metrics of interest : the fitting plot (`r format(object.size(fit_rFerns_depth_plot), units = "kb")`) and the results (`r format(object.size(fit_rFerns_depth_results), units = "kb")`) table.
+\paragraph*{}
+Periodic data-gathering and object deletion also permitted to avoid memory creep and R crashes.
 
 \newpage
 \section{Results}
