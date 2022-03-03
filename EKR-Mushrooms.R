@@ -3,17 +3,19 @@
 ##########################
 
 # Check and install required libraries
-if(!require(plyr)) install.packages("plyr", repos = "http://cran.us.r-project.org")            # Needed for rpartCost
-if(!require(MASS)) install.packages("MASS", repos = "http://cran.us.r-project.org")            # Linear Discriminant Analysis (lda2)
 if(!require(caret)) install.packages("caret", repos = "http://cran.us.r-project.org")          # Tools for machine learning
-if(!require(GGally)) install.packages("GGally", repos = "http://cran.us.r-project.org")        # Correlation plots (pairs)
+if(!require(MASS)) install.packages("MASS", repos = "http://cran.us.r-project.org")            # Linear Discriminant Analysis (lda2)
 if(!require(mda)) install.packages("mda", repos = "http://cran.us.r-project.org")              # Penalized Discriminant Analysis (pda)
+if(!require(gam)) install.packages("gam", repos = "http://cran.us.r-project.org")          # Generalized Additive Models (gamLoess)
 if(!require(rpart)) install.packages("rpart", repos = "http://cran.us.r-project.org")          # Classification And Regression Tree (rpart, rpartCost)
+if(!require(plyr)) install.packages("plyr", repos = "http://cran.us.r-project.org")            # Needed for rpartCost
 if(!require(C50)) install.packages("C50", repos = "http://cran.us.r-project.org")              # C5.0 models (c50tree)
 if(!require(party)) install.packages("party", repos = "http://cran.us.r-project.org")          # Conditional Inference Tree (ctree)
 if(!require(ranger)) install.packages("ranger", repos = "http://cran.us.r-project.org")        # Random Forest, fast implementation (ranger)
 if(!require(e1071)) install.packages("e1071", repos = "http://cran.us.r-project.org")          # Needed for ranger
 if(!require(rFerns)) install.packages("rFerns", repos = "http://cran.us.r-project.org")        # Random Ferns (rFerns)
+if(!require(Rborist)) install.packages("Rborist", repos = "http://cran.us.r-project.org")      # Random forests (Rborist)
+if(!require(GGally)) install.packages("GGally", repos = "http://cran.us.r-project.org")        # Correlation plots (pairs)
 if(!require(tidyverse)) install.packages("tidyverse", repos = "http://cran.us.r-project.org")  # Set of packages used in everyday data analyses
 
 # Load required libraries
@@ -519,7 +521,8 @@ gc()
 #     TRAINING SET ANALYSIS WITH CARET MODELS     #
 ###################################################
 # https://topepo.github.io/caret/available-models.html
-
+# names(getModelInfo())
+# getModelInfo(Rborist)
 
 # Define function : run model with given parameters, evaluate the performance (Specificity), return fitting results
 fit_test <- function(fcn_model){
@@ -543,13 +546,22 @@ fit_lda2_dim_plot <- ggplot(fit_lda2_dim)
 fit_lda2_dim_results <- fit_lda2_dim$results
 fit_pda_lambda_plot <- ggplot(fit_pda_lambda)
 fit_pda_lambda_results <- fit_pda_lambda$results
-
+# Compute variable importances
+da_varimp <- cbind(varImp(fit_lda2_dim)$importance["edible"], 
+                   varImp(fit_pda_lambda)$importance["edible"])
 
 # Generalized Additive Model
 set_gamLoess_span <-  c("gamLoess", "tuneGrid  = data.frame(span = seq(from = 0.01, to = 1, by = 0.24), degree = 1)")
 set_gamLoess_degree <-  c("gamLoess", "tuneGrid  = data.frame(degree = c(0, 1), span = 0.5)")
 fit_gamLoess_span <- fit_test(set_gamLoess_span)
 fit_gamLoess_degree <- fit_test(set_gamLoess_degree)
+# Extract results of interest
+fit_gamLoess_span_plot <- ggplot(fit_gamLoess_span)
+fit_gamLoess_span_results <- fit_gamLoess_span$results
+fit_gamLoess_degree_plot <- ggplot(fit_gamLoess_degree)
+fit_gamLoess_degree_results <- fit_gamLoess_degree$results
+# Compute variable importances
+gam_varimp <- varImp(fit_gamLoess_span)$importance["edible"]
 
 # Tree-based Models
 set_rpart_cp <- c("rpart", "tuneGrid  = data.frame(cp = c(1e-5, 1e-4, 1e-3, 1e-2, 5e-2))")
@@ -563,7 +575,6 @@ fit_rpartcost_complexity <- fit_test(set_rpartcost_complexity)
 fit_rpartcost_cost <- fit_test(set_rpartcost_cost)
 fit_ctree_criterion <- fit_test(set_ctree_criterion)
 fit_c50tree <- fit_test(set_c50tree)
-
 # Extract results of interest
 fit_rpart_cp_tree <- plot(fit_rpart_cp$finalModel)
 fit_rpart_cp_results <- fit_rpart_cp$results
@@ -578,17 +589,23 @@ fit_rpartcost_cost_bestTune <- fit_rpartcost_cost$bestTune
 fit_ctree_criterion_plot <- ggplot(fit_ctree_criterion_cost)
 fit_ctree_criterion_results <- fit_ctree_criterion$results
 fit_c50tree_results <- fit_c50tree$results
-
+# Run best CART model
 set_rpartcost_best <- c("rpartCost", paste0("tuneGrid  = data.frame(cp = ", 
                                             fit_rpartcost_complexity$bestTune$cp, 
                                             ", Cost = ", fit_rpartcost_cost$bestTune$Cost, ")" ))
 fit_rpartcost_best <- fit_test(set_rpartcost_best)
 fit_rpartcost_best_results <- fit_rpartcost_best$results
-
+# Compute variable importances
+tree_varimp <- cbind(varImp(fit_rpart_cp)$importance["edible"], 
+                     varImp(fit_rpartcost_best)$importance["edible"],
+                     varImp(fit_ctree_criterion)$importance["edible"],
+                     varImp(fit_c50tree)$importance["edible"]
+)  
 # Get object list sizes and clean environment
 object_list <- objects() 
 sizes_list2 <- sapply(X = object_list, FUN = obj_size)
 rm(fit_lda2_dim, set_pda_lambda)
+rm(fit_gamLoess_span, fit_gamLoess_degree)
 rm(fit_rpartcost_complexity, fit_rpartcost_cost, fit_rpart_cp, fit_rpart_example, fit_ctree_criterion, fit_c50tree, fit_rpartcost_best)
 gc()
 
@@ -603,8 +620,9 @@ fit_rFerns_depth <- fit_test(set_rFerns_depth)
 fit_ranger_mtry <- fit_test(set_ranger_mtry)
 fit_ranger_splitrule <- fit_test(set_ranger_splitrule)
 fit_ranger_nodesize <- fit_test(set_ranger_nodesize)
-
-# Extract results of interest and clean environment (fit_rFerns size is > 1 GB !)
+fit_Rborist_pred <- fit_test(set_Rborist_pred)
+fit_Rborist_minNode <- fit_test(set_Rborist_minNode)
+# Extract results of interest
 fit_rFerns_depth_plot <- ggplot(fit_rFerns_depth)
 fit_rFerns_depth_results <- fit_rFerns_depth$results
 fit_ranger_mtry_plot <- ggplot(fit_ranger_mtry)
@@ -616,7 +634,13 @@ fit_ranger_splitrule_bestTune <- fit_ranger_splitrule$bestTune
 fit_ranger_nodesize_plot <- ggplot(fit_ranger_nodesize)
 fit_ranger_nodesize_results <- fit_ranger_nodesize$results
 fit_ranger_nodesize_bestTune <- fit_ranger_nodesize$bestTune
-
+fit_Rborist_pred_plot <- ggplot(fit_Rborist_pred)
+fit_Rborist_pred_results <- fit_Rborist_pred$results
+fit_Rborist_pred_bestTune <- fit_Rborist_pred$bestTune
+fit_Rborist_minNode_plot <- ggplot(fit_Rborist_minNode)
+fit_Rborist_minNode_results <- fit_Rborist_minNode$results
+fit_Rborist_minNode_bestTune <- fit_Rborist_minNode$bestTune
+# Run optimal ranger model
 set_ranger_best <- c("ranger", paste0("tuneGrid  = data.frame(min.node.size = ", 
                                             fit_ranger_nodesize_bestTune$min.node.size, 
                                             ", splitrule = '", fit_ranger_splitrule_bestTune$splitrule,
@@ -624,8 +648,19 @@ set_ranger_best <- c("ranger", paste0("tuneGrid  = data.frame(min.node.size = ",
                                             ", num.trees = 10"))
 fit_ranger_best <- fit_test(set_ranger_best)
 fit_ranger_best_results <- fit_ranger_best$results
-
-# Get object list sizes and clean environment
+# Run optimal Rborist model
+set_Rborist_best <- c("Rborist", paste0("tuneGrid  = data.frame(predFixed = ", 
+                                        fit_Rborist_pred_bestTune$predFixed, 
+                                        "', minNode = ", fit_Rborist_minNode_bestTune$mtry, ")", 
+                                        ", num.trees = 10"))
+fit_Rborist_best <- fit_test(set_Rborist_best)
+fit_Rborist_best_results <- fit_Rborist_best$results
+# Compute variable importances
+rf_varimp <- cbind(varImp(fit_rFerns_depth)$importance["edible"],
+                   varImp(fit_ranger_best)$importance["edible"], 
+                   varImp(fit_Rborist_best)$importance["edible"]
+)
+# Get object list sizes and clean environment (fit_rFerns size is > 1 GB !)
 object_list <- objects() 
 sizes_list3 <- sapply(X = object_list, FUN = obj_size)
 rm(fit_rFerns_depth, fit_ranger_mtry, fit_ranger_splitrule, fit_ranger_nodesize, fit_ranger_best)
@@ -640,15 +675,6 @@ gc()
 # plot(fit_ranger, metric = "Spec", plotType = "level", scales = list(x = list(rot = 90)))
 # plot(fit_ranger, metric = "Spec")
 # ggplot(fit_ranger)
-
-
-# Variable Importance
-# da_varimp <- cbind(varImp(fit_lda2_dim)$importance["edible"], 
-#                    varImp(fit_pda_lambda)$importance["edible"])
-# names(da_varimp) <- c("lda2", "pda")
-# da_varimp <- da_varimp %>% arrange(desc(lda2)) %>% round(2) %>% head(10)
-# 
-# model_list <- names(getModelInfo())
 
 #########################################################
 #     MODEL PERFORMANCE AGAINST THE EVALUATION SET      #
