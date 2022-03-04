@@ -559,7 +559,7 @@ This study showed that given particular selection conditions imposed by circumst
 \paragraph*{}
 This bi-criteria model, while already quite efficient (*Sens* = `r round(results_biclass["Sensitivity"], 3)`, *Spec* = `r round(results_biclass["Specificity"], 3)`, *F1* = `r round(results_biclass["F1"], 3)`) did not fully achieve the specificity requirement against the evaluation dataset.
 \paragraph*{}
-
+The best classification tools were random forest models : ranger and Rborist, which both gave perfect sensitivity and specificity values. rFerns, while also being a random forest model, was much less accurate.
 *Section that gives a brief summary of the report, its limitations and future work*
 
 \newpage
