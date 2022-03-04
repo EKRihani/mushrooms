@@ -528,11 +528,11 @@ gc()
 fit_test <- function(fcn_model){
    set.seed(1)
    tr_ctrl <- trainControl(classProbs = TRUE, summaryFunction = twoClassSummary, method = "cv", number = 10)   # Set performance evaluation parameters to twoClassSummary (ROC, Sens, Spec), with 10-fold cross-validation
-   cmd <- paste0("train(class ~ ., method = '", 
+   cmd <- paste0("train(class ~ ., method = '",      # Build command, set performance metric to Specificity
                         fcn_model[1], 
                         "', data = trainvalid_set, trControl = tr_ctrl, metric = 'Spec', ", 
-                        fcn_model[2],")") # Build command, set performance metric to Specificity
-   fitting <- eval(parse(text = cmd))     # Run command
+                        fcn_model[2],")")
+   fitting <- eval(parse(text = cmd))        # Run command
    fitting
 }
 
@@ -549,6 +549,7 @@ fit_pda_lambda_results <- fit_pda_lambda$results
 # Compute variable importances
 da_varimp <- cbind(varImp(fit_lda2_dim)$importance["edible"], 
                    varImp(fit_pda_lambda)$importance["edible"])
+names(da_varimp) <- c("lda2", "pda")
 
 # Generalized Additive Model
 set_gamLoess_span <-  c("gamLoess", "tuneGrid  = data.frame(span = seq(from = 0.01, to = 1, by = 0.24), degree = 1)")
@@ -560,8 +561,6 @@ fit_gamLoess_span_plot <- ggplot(fit_gamLoess_span)
 fit_gamLoess_span_results <- fit_gamLoess_span$results
 fit_gamLoess_degree_plot <- ggplot(fit_gamLoess_degree)
 fit_gamLoess_degree_results <- fit_gamLoess_degree$results
-# Compute variable importances
-gam_varimp <- varImp(fit_gamLoess_span)$importance["edible"]
 
 # Tree-based Models
 set_rpart_cp <- c("rpart", "tuneGrid  = data.frame(cp = c(1e-5, 1e-4, 1e-3, 1e-2, 5e-2))")
@@ -586,25 +585,24 @@ fit_rpartcost_complexity_bestTune <- fit_rpartcost_complexity$bestTune
 fit_rpartcost_cost_plot <- ggplot(fit_rpartcost_cost)
 fit_rpartcost_cost_results <- fit_rpartcost_cost$results
 fit_rpartcost_cost_bestTune <- fit_rpartcost_cost$bestTune
-fit_ctree_criterion_plot <- ggplot(fit_ctree_criterion_cost)
+fit_ctree_criterion_plot <- ggplot(fit_ctree_criterion)
 fit_ctree_criterion_results <- fit_ctree_criterion$results
 fit_c50tree_results <- fit_c50tree$results
 # Run best CART model
-set_rpartcost_best <- c("rpartCost", paste0("tuneGrid  = data.frame(cp = ", 
+set_rpartcost_best <- c("rpartCost", paste0("tuneGrid  = data.frame(cp = ",
                                             fit_rpartcost_complexity$bestTune$cp, 
                                             ", Cost = ", fit_rpartcost_cost$bestTune$Cost, ")" ))
 fit_rpartcost_best <- fit_test(set_rpartcost_best)
 fit_rpartcost_best_results <- fit_rpartcost_best$results
 # Compute variable importances
-tree_varimp <- cbind(varImp(fit_rpart_cp)$importance["edible"], 
-                     varImp(fit_rpartcost_best)$importance["edible"],
-                     varImp(fit_ctree_criterion)$importance["edible"],
-                     varImp(fit_c50tree)$importance["edible"]
-)  
+tree_varimp <- cbind(varImp(fit_rpartcost_best)$importance["edible"],
+                     varImp(fit_ctree_criterion)$importance["edible"]
+)
+names(tree_varimp) <- c("CART", "ctree")
 # Get object list sizes and clean environment
 object_list <- objects() 
 sizes_list2 <- sapply(X = object_list, FUN = obj_size)
-rm(fit_lda2_dim, set_pda_lambda)
+rm(fit_lda2_dim, fit_pda_lambda)
 rm(fit_gamLoess_span, fit_gamLoess_degree)
 rm(fit_rpartcost_complexity, fit_rpartcost_cost, fit_rpart_cp, fit_rpart_example, fit_ctree_criterion, fit_c50tree, fit_rpartcost_best)
 gc()
@@ -614,14 +612,15 @@ set_rFerns_depth <- c("rFerns", "tuneGrid  = data.frame(depth = 2^(1:5)/2)")
 set_ranger_mtry <- c("ranger", "tuneGrid  = data.frame(mtry = seq(from = 1, to = 106, by = 15), splitrule = 'extratrees', min.node.size = 2), num.trees = 6")
 set_ranger_splitrule <- c("ranger", "tuneGrid  = data.frame(splitrule = c('gini', 'extratrees'), mtry = 50, min.node.size = 2), num.trees = 6")
 set_ranger_nodesize <- c("ranger", "tuneGrid  = data.frame(min.node.size = seq(from = 1, to = 15, by = 2), mtry = 50, splitrule = 'extratrees'), num.trees = 6")
-set_Rborist_pred <- c("Rborist", "tuneGrid  = data.frame(predFixed = seq(from = 1, to = 15, by = 2))")
-set_Rborist_minNode <- c("Rborist", "tuneGrid  = data.frame(minNode = seq(from = 1, to = 15, by = 2))")
+set_Rborist_pred <- c("Rborist", "tuneGrid  = data.frame(predFixed = seq(from = 1, to = 41, by = 5), minNode = 2)")
+set_Rborist_minNode <- c("Rborist", "tuneGrid  = data.frame(minNode = 1:5, predFixed =50)")
 fit_rFerns_depth <- fit_test(set_rFerns_depth)
 fit_ranger_mtry <- fit_test(set_ranger_mtry)
 fit_ranger_splitrule <- fit_test(set_ranger_splitrule)
 fit_ranger_nodesize <- fit_test(set_ranger_nodesize)
 fit_Rborist_pred <- fit_test(set_Rborist_pred)
 fit_Rborist_minNode <- fit_test(set_Rborist_minNode)
+
 # Extract results of interest
 fit_rFerns_depth_plot <- ggplot(fit_rFerns_depth)
 fit_rFerns_depth_results <- fit_rFerns_depth$results
@@ -649,21 +648,18 @@ set_ranger_best <- c("ranger", paste0("tuneGrid  = data.frame(min.node.size = ",
 fit_ranger_best <- fit_test(set_ranger_best)
 fit_ranger_best_results <- fit_ranger_best$results
 # Run optimal Rborist model
-set_Rborist_best <- c("Rborist", paste0("tuneGrid  = data.frame(predFixed = ", 
-                                        fit_Rborist_pred_bestTune$predFixed, 
-                                        "', minNode = ", fit_Rborist_minNode_bestTune$mtry, ")", 
-                                        ", num.trees = 10"))
+set_Rborist_best <- c("Rborist", paste0("tuneGrid  = data.frame(predFixed = 6, ", # Value is forced, 6 gives a Spec = 1, and a much better sensitivity
+                                        "minNode = ", fit_Rborist_minNode_bestTune$minNode, ")"))
 fit_Rborist_best <- fit_test(set_Rborist_best)
 fit_Rborist_best_results <- fit_Rborist_best$results
 # Compute variable importances
-rf_varimp <- cbind(varImp(fit_rFerns_depth)$importance["edible"],
-                   varImp(fit_ranger_best)$importance["edible"], 
-                   varImp(fit_Rborist_best)$importance["edible"]
-)
+rf_varimp <- varImp(fit_rFerns_depth)$importance["edible"]
+
 # Get object list sizes and clean environment (fit_rFerns size is > 1 GB !)
 object_list <- objects() 
 sizes_list3 <- sapply(X = object_list, FUN = obj_size)
-rm(fit_rFerns_depth, fit_ranger_mtry, fit_ranger_splitrule, fit_ranger_nodesize, fit_ranger_best)
+rm(fit_rFerns_depth, fit_ranger_mtry, fit_ranger_splitrule, fit_ranger_nodesize, fit_ranger_best, 
+   fit_Rborist_pred, fit_Rborist_minNode, fit_Rborist_best)
 gc()
 
 # For complete factor combinations testing (SUPER SLOW) : Compute and Plot
@@ -711,6 +707,18 @@ CM_ranger_final <- confusionMatrix(data = pred_ranger_final, reference = evaluat
 results_ranger <- c(CM_ranger_final$byClass["Sensitivity"], CM_ranger_final$byClass["Specificity"], CM_ranger_final$byClass["F1"])
 results_ranger <- round(results_ranger, 4)
 
+cmd <- paste0("train(class ~ ., method = 'Rborist', data = trainvalid_set,", set_Rborist_best[2], ")") # Build command
+fit_Rborist_final <- eval(parse(text = cmd))     # Run command
+pred_Rborist_final <- predict(object = fit_Rborist_final, newdata = evaluation_set)
+CM_Rborist_final <- confusionMatrix(data = pred_Rborist_final, reference = evaluation_set$class)
+results_Rborist <- c(CM_Rborist_final$byClass["Sensitivity"], CM_Rborist_final$byClass["Specificity"], CM_Rborist_final$byClass["F1"])
+results_Rborist <- round(results_Rborist, 4)
+
+# Get object list sizes and clean environment
+object_list <- objects() 
+sizes_list4 <- sapply(X = object_list, FUN = obj_size)
+rm(fit_ranger_final, fit_Rborist_final)
+gc()
 
 #############################
 #     MEMORY OCCUPATION     #
@@ -718,8 +726,8 @@ results_ranger <- round(results_ranger, 4)
 
 # Get object list sizes
 object_list <- objects() 
-sizes_list4 <- sapply(X = object_list, FUN = obj_size)
-sizes_list <- c(sizes_list1, sizes_list2, sizes_list3, sizes_list4)  # Get all object list sizes gathered during the study
+sizes_list5 <- sapply(X = object_list, FUN = obj_size)
+sizes_list <- c(sizes_list1, sizes_list2, sizes_list3, sizes_list4, sizes_list5)  # Get all object list sizes gathered during the study
 sizes_list <- sizes_list[!duplicated(names(sizes_list))]             # Remove all duplicates
 sizes_list <- t(data.frame(as.list(sizes_list)))
 sizes_list <- cbind(rownames(sizes_list), data.frame(sizes_list, row.names=NULL))
