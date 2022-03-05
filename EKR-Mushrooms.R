@@ -614,8 +614,8 @@ set_rFerns_depth <- c("rFerns", "tuneGrid  = data.frame(depth = 2^(1:5)/2)")
 set_ranger_mtry <- c("ranger", "tuneGrid  = data.frame(mtry = seq(from = 1, to = 106, by = 15), splitrule = 'extratrees', min.node.size = 2), num.trees = 6")
 set_ranger_splitrule <- c("ranger", "tuneGrid  = data.frame(splitrule = c('gini', 'extratrees'), mtry = 50, min.node.size = 2), num.trees = 6")
 set_ranger_nodesize <- c("ranger", "tuneGrid  = data.frame(min.node.size = seq(from = 1, to = 15, by = 2), mtry = 50, splitrule = 'extratrees'), num.trees = 6")
-set_Rborist_pred <- c("Rborist", "tuneGrid  = data.frame(predFixed = seq(from = 1, to = 41, by = 5), minNode = 2)")
-set_Rborist_minNode <- c("Rborist", "tuneGrid  = data.frame(minNode = 1:5, predFixed =50)")
+set_Rborist_pred <- c("Rborist", "tuneGrid  = data.frame(predFixed = seq(from = 1, to = 41, by = 5), minNode = 2), ntrees = 3")
+set_Rborist_minNode <- c("Rborist", "tuneGrid  = data.frame(minNode = 1:5, predFixed =50), ntrees = 3")
 fit_rFerns_depth <- fit_test(set_rFerns_depth)
 fit_ranger_mtry <- fit_test(set_ranger_mtry)
 fit_ranger_splitrule <- fit_test(set_ranger_splitrule)
@@ -650,8 +650,9 @@ set_ranger_best <- c("ranger", paste0("tuneGrid  = data.frame(min.node.size = ",
 fit_ranger_best <- fit_test(set_ranger_best)
 fit_ranger_best_results <- fit_ranger_best$results
 # Run optimal Rborist model
-set_Rborist_best <- c("Rborist", paste0("tuneGrid  = data.frame(predFixed = 6, ", # Value is forced, 6 gives a Spec = 1, and a much better sensitivity
-                                        "minNode = ", fit_Rborist_minNode_bestTune$minNode, ")"))
+set_Rborist_best <- c("Rborist", paste0("tuneGrid  = data.frame(predFixed = 6, ",    # Value is forced, 6 gives a Spec = 1, and a much better sensitivity
+                                        "minNode = ", fit_Rborist_minNode_bestTune$minNode, ")",
+                                        ", ntrees = 3"))
 fit_Rborist_best <- fit_test(set_Rborist_best)
 fit_Rborist_best_results <- fit_Rborist_best$results
 # Compute variable importances

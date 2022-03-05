@@ -75,7 +75,7 @@ library(rmarkdown)
 library(knitr)
 library(tidyverse)
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, fig.pos = "!H")
-knitr::write_bib(c("tidyverse", "caret",  "rmarkdown", "GGally", "plyr", "MASS", "mda", "rpart", "C50", "party", "ranger", "e1071", "rFerns", "knitr", "ggpubr"), "packages.bib")
+knitr::write_bib(c("tidyverse", "caret",  "rmarkdown", "GGally", "plyr", "MASS", "mda", "rpart", "C50", "party", "ranger", "Rborist", "e1071", "rFerns", "knitr", "ggpubr"), "packages.bib")
 ```
 \newpage
 \section{Overview}
@@ -136,17 +136,21 @@ This dataset contains the data from n = `r summary_number` mushrooms (rows). Eac
 \section{Methods and Analysis}
 \subsection{Computer and R configuration}
 \paragraph*{}
-The code, benchmarks and report were run on the following computer configuration :
+The code, final benchmarks and report were run on the following computer configuration :
 
 * CPU : AMD Ryzen 5 5600G
 * RAM : 2x16 GB DDR4-3200
 * SSD : Crucial P5 M2 NVMe
 * OS : Xubuntu Linux 20.04 LTS
 * R : version 3.6.3
-* Packages : tidyverse[@R-tidyverse] (v1.3.1), caret[@R-caret] (v6.0-88), GGally[@R-GGally] (v2.1.2), MASS[@R-MASS] (v7.3-51.5), mda[@R-mda] (v0.4-10), rpart[@R-rpart] (v4.1-15), plyr[@R-plyr] (v1.8.5), C50[@R-C50] (v0.1.5), party[@R-party] (v1.3-9), ranger[@R-ranger] (v0.13.1), e1071[@R-e1071] (v1.7-9), rFerns[@R-rFerns] (v5.0.0), ggpubr[@R-ggpubr] (v0.4.0), rmarkdown[@R-rmarkdown] (v2.11), knitr[@R-knitr] (v1.34).
+* Packages : tidyverse[@R-tidyverse] (v1.3.1), caret[@R-caret] (v6.0-88), GGally[@R-GGally] (v2.1.2), MASS[@R-MASS] (v7.3-51.5), mda[@R-mda] (v0.4-10), rpart[@R-rpart] (v4.1-15), plyr[@R-plyr] (v1.8.5), C50[@R-C50] (v0.1.5), party[@R-party] (v1.3-9), ranger[@R-ranger] (v0.13.1), e1071[@R-e1071] (v1.7-9), rFerns[@R-rFerns] (v5.0.0), Rborist[@R-Rborist] (v0.2-3), ggpubr[@R-ggpubr] (v0.4.0), rmarkdown[@R-rmarkdown] (v2.11), knitr[@R-knitr] (v1.34).
 
 \paragraph*{}
-The code was also tested on a Windows 7 x64 computer on R 4.1.0. It was not tested on any Mac OS system.
+The code was also tested on a Windows 7 x64 computer with R 4.1.0, and on a laptop with 4GB RAM. 
+\paragraph*{}
+It was not tested on any Mac OS system.
+
+
 \subsection{Data preparation and cleaning}
 \paragraph*{}
 The dataset is directly downloaded from the UCI database in zip format and unzipped. The archive contains four files :
@@ -158,26 +162,28 @@ The dataset is directly downloaded from the UCI database in zip format and unzip
 
 \paragraph*{}
 The file of interest (*secondary_data.csv*) is extracted using the *read.csv* function.
+
 \paragraph*{}
+\newpage
 The initial and final structures of the dataset are as following :
 ```{r out.width = "90%", echo = FALSE}
 kable(structure_dataset, caption = "Dataset structure")
 ```
 The import automatically converted all character variables to factors. The only structural modification was to modify some of the 2-level factors into logical variables.
 \paragraph*{}
-The primary and secondary *data_meta* files include all information to translate the one-letter variable codes into comprehensible words. However, two variable codes are missing.
+The primary and secondary *data_meta* files include all information to translate the one-letter variable codes into comprehensible words. However, two variable codes were missing.
 \paragraph*{}
-Firstly, the *stem.root = f* value isn't explained. Since most *f* values for the other categorical stem variables (*stem.surface*, *stem.color*) mean the mushroom has no stem and given the fact that all stem.root = f values are always associated with *stem.surface = f*, *stem.color = f*, *stem.height = 0* and *stem.width = 0*, one can safely assume that *stem.root = f* simply means there is no stem.
+Firstly, the *stem.root = f* value wasn't explained. Since most *f* values for the other categorical stem variables (*stem.surface*, *stem.color*) meant the mushroom has no stem, and given the fact that all stem.root = f values are always associated with *stem.surface = f*, *stem.color = f*, *stem.height = 0* and *stem.width = 0*, one can safely assume that *stem.root = f* simply means there is no stem.
 ```{r out.width = "100%", echo = FALSE}
 
 kable(uniques_missing_f, caption = "Unique values for stem.root = 'f'")
 ```
 \paragraph*{}
-Secondly, the *cap.surface = d* value isn't explained either. There was no workaround to lift this uncertainty except from performing some search : digging into the primary dataset, finding all the mushrooms that may have the value *cap.surface = d*, translating the common english name into the scientific (latin) ones and finding the relevant descriptions in mycology books.[@courtecuisse]
+Secondly, the *cap.surface = d* value wasn't explained either. There was no workaround to lift this uncertainty except from performing some search : digging into the primary dataset, finding all the species that may have the value *cap.surface = d*, translating the common english name into the scientific (latin) ones and finding the relevant descriptions in specialized mycology books.[@courtecuisse]
 \paragraph*{}
 This research showed all these mushrooms to have a velvety, or downy surface. A value d = downy was thus assumed.
 \paragraph*{}
-These issues underline why it is important to provide extensive documentation, well-defined variables and values in every datasets and to follow international standards (such as latin names). Fortunately, the author provides the primary dataset with the characteristics of all species; without that file, it would have been impossible to find what characteristic lied under the *cap.surface = d* value.
+These issues underline the importance of providing extensive documentation, well-defined variables and values in every datasets and of following international standards (such as latin names). Fortunately, the author provides the primary dataset with the characteristics of all species; without that file, it would have been impossible to find what characteristic lied under the *cap.surface = d* value.
 \paragraph*{}
 
 \subsection{Training set analysis}
@@ -216,7 +222,7 @@ The stem width distribution looks like a bell curve with a long right tail, and 
 \paragraph*{}
 All further classification strategies will be elaborated, tuned and selected on one rule : the specificity on the edibility criterion must be equal to 1, false negatives are not tolerated. In layman's terms, a good algorithm may reject edible mushrooms but should **never** classify a poisonous one as edible.
 \paragraph*{}
-The first models one can build are simple classifiers that categorize the mushrooms as edible or poisonous, based on one or two criteria.
+The first models one can build are simple classifiers that categorize the mushrooms as edible or poisonous, based on one or several criteria.
 \paragraph*{}
 Before training, validation and tuning of the algorithms, a training and validation strategy must be defined. Since these clasifiers are designed from scratch, and in order to keep the code simple, a basic train-validation split was chosen, with a 90/10 split ratio between the training and validation sets.
 \paragraph*{}
@@ -459,7 +465,7 @@ fit_rFerns_depth_plot + theme_bw()
 
 While pretty fast, the Random Ferns Model yielded disappointing results, with a maximum specificity of only ($Spec_{max} =$ `r round(max(fit_rFerns_depth_results["Spec"]), 3)`). The maximum sensitivity wasn't very high either ($Sens_{max} =$ `r round(max(fit_rFerns_depth_results["Sens"]), 3)`). Both metrics were inferior to the basic 2-criteria model ones.
 
-The second random forest model is the ranger model. This model has three tuning parameters :
+The second random forest model is the ranger model. The caret package documentation mentions three tuning parameters : the minimal node size (*min.node.size*), the number of features to split on each node (*mtry*) and the split rule (*splitrule*).
 
 ```{r, echo = FALSE, fig.height = 2.5, fig.cap = "Ranger model specificity"}
 plot(ggarrange(
@@ -470,14 +476,38 @@ plot(ggarrange(
    )
 )
 ```
-The preliminary tuning step showed very promising results : the required specificity was already achieved on several occurrences single-parameter tuning. With optimal parameters (*min.node.size* = `r fit_ranger_nodesize_bestTune$min.node.size`, *mtry* = `r fit_ranger_splitrule_bestTune$mtry` *splitrule* = `r fit_ranger_splitrule_bestTune$splitrule`).
+The preliminary tuning step showed very promising results : even with a low number of trees (*n* = 6), the required specificity was already achieved on several occurrences with single-parameter tuning. With optimal parameters (*min.node.size* = `r fit_ranger_nodesize_bestTune$min.node.size`, *mtry* = `r fit_ranger_splitrule_bestTune$mtry` and *splitrule* = `r fit_ranger_splitrule_bestTune$splitrule`).
 
 ```{r, echo = FALSE}
-kable(fit_ranger_best_results[1:6], caption = "Performance of the Ranger model with optimal settings")
+kable(fit_ranger_best_results[1:6], caption = "Performance of the Ranger model (optimal settings)")
 ```
 This model achieved excellent results, giving perfect specificity and sensitivity in this evaluation phase.
 \paragraph*{}
-This result underlines an interesting fact : not all random forest are created equal. In preliminary studies, some random forest models proved to be extremely slow, some were considerably faster. This study also shows the considerable difference in sensitivity and specificity between the rFerns and the Ranger random forest models.
+The last random forest model was provided by Rborist. The caret package mentions two tuning parameters for this mode : number of trial predictors for a split (*predFixed*) and minimum number of distinct row references to split a node (*minNode*).
+
+```{r, echo = FALSE, fig.height = 2.5, fig.cap = "Rborist model specificity"}
+plot(ggarrange(
+   ncol = 2,
+   fit_Rborist_pred_plot + theme_bw(),
+   fit_Rborist_minNode_plot + ylab("") + theme_bw()
+   )
+)
+```
+
+```{r, echo = FALSE}
+kable(fit_Rborist_pred_results[1:5, 1:5], caption = "Performance of the Rborist model (predFixed tuning)")
+```
+
+
+Again, the preliminary tuning step showed promising results : on this model too, the required specificity was achieved on several occurrences using only single-parameter tuning. With optimal parameters (*predFixed* = 6, manually fixed value because of the higher sensitivity), and *minNode* = `r fit_Rborist_minNode_bestTune$minNode`), the performance was estimated to to be :
+
+```{r, echo = FALSE}
+kable(fit_Rborist_best_results, caption = "Performance of the Rborist model (optimal settings)")
+```
+
+The Rborist model gave the same excellent results as the Ranger one, with perfect sensitivity and specificity.
+\paragraph*{}
+These results underline an interesting fact : not all random forest models are created equal. In preliminary studies, some random forest models proved to be extremely slow, some were considerably faster. This study also shows the considerable difference in sensitivity and specificity between the rFerns and the Ranger or Rborist random forest models.
 
 \subsection{Memory Optimization}
 During the building of this study, an unforeseen and unfortunate event resulted into the addition of a secondary goal : the code had to be able to handle a `r summary_number` $\times$ `r nrow(structure_dataset)` dataset and run on lower-end computers, with only 4GB RAM + 4GB swap. Memory optimization was an interesting challenge, and implied :
@@ -521,6 +551,13 @@ Periodic data-gathering and object deletion thus permitted to avoid unnecessary 
 \section{Results}
 \subsection{Evaluation protocol}  
 \paragraph*{}
+The models that attained the specificity requirement during the validation process were selected for the final evaluation. The three selected models are :
+
+* Two-criteria classifier,
+* Ranger random forest,
+* Rborist random forest.
+
+\paragraph*{}
 All models were trained on the training dataset, set with the best hyperparameters values obtained by evaluating the performance against the validation dataset. Their performance against the evaluation dataset will be analyzed, using the same criteria as before :
 
 1. Specificity *must* be equal to one.
@@ -553,7 +590,7 @@ kable(CM_ranger_final$table, caption = "Confusion Matrix of the Ranger model (vs
 ```  
 The final accuracy was equal to `r CM_ranger_final$overall["Accuracy"]`, with a 95% confidence interval of [`r round(CM_ranger_final$overall["AccuracyLower"], 4)`; `r round(CM_ranger_final$overall["AccuracyUpper"], 4)`]. The ranger model provided excellent results, in a very reasonable amount of time (`r time_ranger` min).
 \paragraph*{}
-The Rborist model gave similar results with a final accuracy equal to `r CM_Rborist_final$overall["Accuracy"]`, with a 95% confidence interval of [`r round(CM_Rborist_final$overall["AccuracyLower"], 4)`; `r round(CM_Rborist_final$overall["AccuracyUpper"], 4)`]. The Rborist model, while giving comparable results to the Ranger one, was sensibly slower (`r time_Rborist` min).
+The Rborist model gave similar results with a final accuracy equal to `r CM_Rborist_final$overall["Accuracy"]`, with a 95% confidence interval of [`r round(CM_Rborist_final$overall["AccuracyLower"], 4)`; `r round(CM_Rborist_final$overall["AccuracyUpper"], 4)`]. The Rborist model, while giving comparable results to the Ranger one, was sensibly slower (`r time_Rborist` min), although being run with a lower number of trees (*n* = 3 vs 10).
 
 
 ```{r out.width = "100%", echo = FALSE}
@@ -577,6 +614,7 @@ Apart from the limitations of the starting dataset, this work has some notable l
 
 * Memory optimization could probably be improved, for example with use of local environments,
 * The basic classifier code could definitely be optimized and make more use of vectorization,
+* Parameter optimization was based on the caret package documentation, which doesn't mention all parameters,
 * Parallelization could be an interesting strategy to make some computations much faster.
 
 \paragraph*{}
