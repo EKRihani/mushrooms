@@ -6,7 +6,7 @@
 if(!require(caret)) install.packages("caret", repos = "http://cran.us.r-project.org")          # Tools for machine learning
 if(!require(MASS)) install.packages("MASS", repos = "http://cran.us.r-project.org")            # Linear Discriminant Analysis (lda2)
 if(!require(mda)) install.packages("mda", repos = "http://cran.us.r-project.org")              # Penalized Discriminant Analysis (pda)
-if(!require(gam)) install.packages("gam", repos = "http://cran.us.r-project.org")          # Generalized Additive Models (gamLoess)
+if(!require(gam)) install.packages("gam", repos = "http://cran.us.r-project.org")              # Generalized Additive Models (gamLoess)
 if(!require(rpart)) install.packages("rpart", repos = "http://cran.us.r-project.org")          # Classification And Regression Tree (rpart, rpartCost)
 if(!require(plyr)) install.packages("plyr", repos = "http://cran.us.r-project.org")            # Needed for rpartCost
 if(!require(C50)) install.packages("C50", repos = "http://cran.us.r-project.org")              # C5.0 models (c50tree)
@@ -503,6 +503,7 @@ pair_plots <- ggpairs(
 )
 
 # Get all object sizes and clean environment (objects not used in the following steps or in the report)
+#save.image(file = "EKR-mushrooms-dump1.RData")        # Save everything before environment cleaning
 object_list <- objects() 
 sizes_list1 <- sapply(X = object_list, FUN = obj_size)
 rm(URL, datafile)
@@ -600,6 +601,7 @@ tree_varimp <- cbind(varImp(fit_rpartcost_best)$importance["edible"],
 )
 names(tree_varimp) <- c("CART", "ctree")
 # Get object list sizes and clean environment
+#save.image(file = "EKR-mushrooms-dump2.RData")        # Save everything before environment cleaning
 object_list <- objects() 
 sizes_list2 <- sapply(X = object_list, FUN = obj_size)
 rm(fit_lda2_dim, fit_pda_lambda)
@@ -656,6 +658,7 @@ fit_Rborist_best_results <- fit_Rborist_best$results
 rf_varimp <- varImp(fit_rFerns_depth)$importance["edible"]
 
 # Get object list sizes and clean environment (fit_rFerns size is > 1 GB !)
+#save.image(file = "EKR-mushrooms-dump3.RData")        # Save everything before environment cleaning
 object_list <- objects() 
 sizes_list3 <- sapply(X = object_list, FUN = obj_size)
 rm(fit_rFerns_depth, fit_ranger_mtry, fit_ranger_splitrule, fit_ranger_nodesize, fit_ranger_best, 
@@ -705,23 +708,29 @@ fit_ranger_final <- eval(parse(text = cmd))     # Run command
 pred_ranger_final <- predict(object = fit_ranger_final, newdata = evaluation_set)
 CM_ranger_final <- confusionMatrix(data = pred_ranger_final, reference = evaluation_set$class)
 results_ranger <- c(CM_ranger_final$byClass["Sensitivity"], CM_ranger_final$byClass["Specificity"], CM_ranger_final$byClass["F1"])
-results_ranger <- round(results_ranger, 4)
 end_time <- Sys.time()     # Stop chronometer
 time_ranger <- difftime(end_time, start_time)
 time_ranger <- time_ranger %>% as.numeric %>% round(.,2)
 
-start_time <- Sys.time()     # Start chronometer
+
+start_time <- Sys.time()            # Start chronometer
 cmd <- paste0("train(class ~ ., method = 'Rborist', data = trainvalid_set,", set_Rborist_best[2], ")") # Build command
 fit_Rborist_final <- eval(parse(text = cmd))     # Run command
 pred_Rborist_final <- predict(object = fit_Rborist_final, newdata = evaluation_set)
 CM_Rborist_final <- confusionMatrix(data = pred_Rborist_final, reference = evaluation_set$class)
 results_Rborist <- c(CM_Rborist_final$byClass["Sensitivity"], CM_Rborist_final$byClass["Specificity"], CM_Rborist_final$byClass["F1"])
-results_Rborist <- round(results_Rborist, 4)
-end_time <- Sys.time()     # Stop chronometer
+end_time <- Sys.time()              # Stop chronometer
 time_Rborist <- difftime(end_time, start_time)
 time_Rborist <- time_Rborist %>% as.numeric %>% round(.,2)
 
+result_Rborist <- c(CM_Rborist_final$byClass["Sensitivity"], CM_Rborist_final$byClass["Specificity"], CM_Rborist_final$byClass["F1"], time_Rborist)
+result_ranger <- c(CM_ranger_final$byClass["Sensitivity"], CM_ranger_final$byClass["Specificity"], CM_ranger_final$byClass["F1"], time_ranger)
+rt_result <- rbind(result_ranger, result_Rborist)
+colnames(rt_result) <- c("Sensitivity", "Specificity", "F1 score", "Run time (min)")
+rownames(rt_result) <- c("Rborist", "Ranger")
+
 # Get object list sizes and clean environment
+#save.image(file = "EKR-mushrooms-dump4.RData")        # Save everything before environment cleaning
 object_list <- objects() 
 sizes_list4 <- sapply(X = object_list, FUN = obj_size)
 rm(fit_ranger_final, fit_Rborist_final)

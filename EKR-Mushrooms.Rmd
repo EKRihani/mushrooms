@@ -24,7 +24,7 @@ references:
       year: 2021
   - id: mushroom2b
     title: "Mushrooms & Toadstools"
-    author: P.Hardin
+    author: P.Harding
     url: https://doi.org/10.1038/s41598-021-87602-3
     DOI: 10.1038/s41598-021-87602-3
     publisher: Collins
@@ -136,7 +136,14 @@ This dataset contains the data from n = `r summary_number` mushrooms (rows). Eac
 \section{Methods and Analysis}
 \subsection{Computer and R configuration}
 \paragraph*{}
-The code and report were run on a Xubuntu Linux 20.04 LTS system, with R 3.6.3 and the following packages : tidyverse[@R-tidyverse] (v1.3.1), caret[@R-caret] (v6.0-88), GGally[@R-GGally] (v2.1.2), MASS[@R-MASS] (v7.3-51.5), mda[@R-mda] (v0.4-10), rpart[@R-rpart] (v4.1-15), plyr[@R-plyr] (v1.8.5), C50[@R-C50] (v0.1.5), party[@R-party] (v1.3-9), ranger[@R-ranger] (v0.13.1), e1071[@R-e1071] (v1.7-9), rFerns[@R-rFerns] (v5.0.0), ggpubr[@R-ggpubr] (v0.4.0), rmarkdown[@R-rmarkdown] (v2.11), knitr[@R-knitr] (v1.34).
+The code, benchmarks and report were run on the following computer configuration :
+
+* CPU : AMD Ryzen 5 5600G
+* RAM : 2x16 GB DDR4-3200
+* SSD : Crucial P5 M2 NVMe
+* OS : Xubuntu Linux 20.04 LTS
+* R : version 3.6.3
+* Packages : tidyverse[@R-tidyverse] (v1.3.1), caret[@R-caret] (v6.0-88), GGally[@R-GGally] (v2.1.2), MASS[@R-MASS] (v7.3-51.5), mda[@R-mda] (v0.4-10), rpart[@R-rpart] (v4.1-15), plyr[@R-plyr] (v1.8.5), C50[@R-C50] (v0.1.5), party[@R-party] (v1.3-9), ranger[@R-ranger] (v0.13.1), e1071[@R-e1071] (v1.7-9), rFerns[@R-rFerns] (v5.0.0), ggpubr[@R-ggpubr] (v0.4.0), rmarkdown[@R-rmarkdown] (v2.11), knitr[@R-knitr] (v1.34).
 
 \paragraph*{}
 The code was also tested on a Windows 7 x64 computer on R 4.1.0. It was not tested on any Mac OS system.
@@ -473,8 +480,9 @@ This model achieved excellent results, giving perfect specificity and sensitivit
 This result underlines an interesting fact : not all random forest are created equal. In preliminary studies, some random forest models proved to be extremely slow, some were considerably faster. This study also shows the considerable difference in sensitivity and specificity between the rFerns and the Ranger random forest models.
 
 \subsection{Memory Optimization}
-During the building of this study, an unforeseen and unfortunate event resulted into the addition of a secondary goal : the code had to be able to handle a `r summary_number` $\times$ `r nrow(structure_dataset)` dataset and run on lower-end computers, with only 4GB RAM + 6GB swap. Memory optimization was an interesting challenge, and implied :
+During the building of this study, an unforeseen and unfortunate event resulted into the addition of a secondary goal : the code had to be able to handle a `r summary_number` $\times$ `r nrow(structure_dataset)` dataset and run on lower-end computers, with only 4GB RAM + 4GB swap. Memory optimization was an interesting challenge, and implied :
 
+* Image saving on hard drive before environment cleaning,
 * Identification and removal of obsolete intermediate values,
 * Identification and removal of objects that won't be used in the final report,
 * Identification and replacement of large objects,
@@ -503,9 +511,11 @@ kable(head(sizes_list,30), caption = "Size of the 30 largest objects")
 
 Some of these objects are quite large, but can fortunately be converted into smaller and still useful objects. 
 \paragraph*{}
-For example, the *very* large rFerns fit object (`r sizes_list %>% filter(object == "fit_rFerns_depth") %>% select("size (Mb)") %>% round` Mb) can be split into two useful objects that gather the metrics of interest : the fitting plot (`r format(object.size(fit_rFerns_depth_plot), units = "KB")`) and the results (`r format(object.size(fit_rFerns_depth_results), units = "KB")`) table.
+For example, the *very* large fit_rFerns_depth train object (`r sizes_list %>% filter(object == "fit_rFerns_depth") %>% select("size (Mb)") %>% round` Mb) can be split into two useful objects that gather the metrics of interest : the fitting plot (`r format(object.size(fit_rFerns_depth_plot), units = "KB")`) and the results (`r format(object.size(fit_rFerns_depth_results), units = "KB")`) table.
 \paragraph*{}
-Periodic data-gathering and object deletion also permitted to avoid memory creep and R crashes.
+Some of these objects were much smaller : ggplots are not heavy *per se*, but while generating plots for all variables proved to be useful at some point in the study, having more than forty 5+ MB plots in memory was not really necessary, especially when running training and validation steps on limited hardware.
+\paragraph*{}
+Periodic data-gathering and object deletion thus permitted to avoid unnecessary memory creep that resulted in major slowdowns or crashes.
 
 \newpage
 \section{Results}
@@ -536,31 +546,21 @@ kable(bi_perf_comp, caption = "Comparison of performance metrics of the bi-crite
 The performance difference does not seem to be significant, and the lower specificity just seems to be a result of a trade-off between sensitivity and specificity. The absence of significant overfitting can also be confirmed by the slight increase of the F1 score during the validation stage.
 
 \subsection{Random forest performance}  
-The final evaluation of the Ranger model yielded the following results :
-```{r out.width = "100%", echo = FALSE}
-kable(results_ranger, caption = "Performance of the Ranger model (vs. evaluation)")
-```
-
-And gave the following confusion matrix.
+The final evaluation of the Ranger gave the following confusion matrix.
 
 ```{r out.width = "100%", echo = FALSE}
 kable(CM_ranger_final$table, caption = "Confusion Matrix of the Ranger model (vs. evaluation)")
 ```  
 The final accuracy was equal to `r CM_ranger_final$overall["Accuracy"]`, with a 95% confidence interval of [`r round(CM_ranger_final$overall["AccuracyLower"], 4)`; `r round(CM_ranger_final$overall["AccuracyUpper"], 4)`]. The ranger model provided excellent results, in a very reasonable amount of time (`r time_ranger` min).
 \paragraph*{}
-The Rborist model gave similar results
-```{r out.width = "100%", echo = FALSE}
-kable(results_Rborist, caption = "Performance of the Rborist model (vs. evaluation)")
-```
+The Rborist model gave similar results with a final accuracy equal to `r CM_Rborist_final$overall["Accuracy"]`, with a 95% confidence interval of [`r round(CM_Rborist_final$overall["AccuracyLower"], 4)`; `r round(CM_Rborist_final$overall["AccuracyUpper"], 4)`]. The Rborist model, while giving comparable results to the Ranger one, was sensibly slower (`r time_Rborist` min).
 
-With the following confusion matrix.
 
 ```{r out.width = "100%", echo = FALSE}
-kable(CM_Rborist_final$table, caption = "Confusion Matrix of the Rborist model (vs. evaluation)")
+kable(rt_result, caption = "Performance of the Ranger and Rborist models (vs. evaluation)")
 ```  
-And final accuracy equal to `r CM_Rborist_final$overall["Accuracy"]`, with a 95% confidence interval of [`r round(CM_Rborist_final$overall["AccuracyLower"], 4)`; `r round(CM_Rborist_final$overall["AccuracyUpper"], 4)`]. The Rborist model, while giving comparable results to the Ranger one, was sensibly slower (`r time_Rborist` min).
 
-*Section that presents the modeling results and discusses the model performance.*
+<!--- Section that presents the modeling results and discusses the model performance. --->
 
 \newpage
 \section{Conclusion}
@@ -572,7 +572,19 @@ This study showed that given particular selection conditions imposed by circumst
 This bi-criteria model, while already quite efficient (*Sens* = `r round(results_biclass["Sensitivity"], 3)`, *Spec* = `r round(results_biclass["Specificity"], 3)`, *F1* = `r round(results_biclass["F1"], 3)`) did not fully achieve the specificity requirement against the evaluation dataset.
 \paragraph*{}
 The best classification tools were random forest models : ranger and Rborist, which both gave perfect sensitivity and specificity values, but with ranger being about `r round(time_Rborist/time_ranger)` times faster. The rFerns model, while also being based on random forests, was much less accurate.
-*Section that gives a brief summary of the report, its limitations and future work*
+\paragraph*{}
+Apart from the limitations of the starting dataset, this work has some notable limitations :
+
+* Memory optimization could probably be improved, for example with use of local environments,
+* The basic classifier code could definitely be optimized and make more use of vectorization,
+* Parallelization could be an interesting strategy to make some computations much faster.
+
+\paragraph*{}
+This study will provide a good basis for further personal work and experimentation on these three aspects.
+\paragraph*{}
+Working on this dataset also gave me nice ideas about a creating a future dataset based on the same ideas as the two original datasets from Schlimmer[@mushroom1] and Wagner[@mushroom2], but with more species and more extensive criteria (such as the smell or the flesh texture) taken from more comprehensive and specialized books.[@courtecuisse]
+
+<!--- Section that gives a brief summary of the report, its limitations and future work. --->
 
 \newpage
 \section{References}
