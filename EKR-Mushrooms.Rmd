@@ -535,7 +535,7 @@ kable(bi_perf_comp, caption = "Comparison of performance metrics of the bi-crite
 ```  
 The performance difference does not seem to be significant, and the lower specificity just seems to be a result of a trade-off between sensitivity and specificity. The absence of significant overfitting can also be confirmed by the slight increase of the F1 score during the validation stage.
 
-\subsection{Ranger random forest performance}  
+\subsection{Random forest performance}  
 The final evaluation of the Ranger model yielded the following results :
 ```{r out.width = "100%", echo = FALSE}
 kable(results_ranger, caption = "Performance of the Ranger model (vs. evaluation)")
@@ -546,7 +546,19 @@ And gave the following confusion matrix.
 ```{r out.width = "100%", echo = FALSE}
 kable(CM_ranger_final$table, caption = "Confusion Matrix of the Ranger model (vs. evaluation)")
 ```  
-The final accuracy was equal to `r CM_ranger_final$overall["Accuracy"]`, with a 95% confidence interval of [`r round(CM_ranger_final$overall["AccuracyLower"], 4)`; `r round(CM_ranger_final$overall["AccuracyUpper"], 4)`]. The ranger model provided excellent results, in a very reasonable amount of time.
+The final accuracy was equal to `r CM_ranger_final$overall["Accuracy"]`, with a 95% confidence interval of [`r round(CM_ranger_final$overall["AccuracyLower"], 4)`; `r round(CM_ranger_final$overall["AccuracyUpper"], 4)`]. The ranger model provided excellent results, in a very reasonable amount of time (`r time_ranger` min).
+\paragraph*{}
+The Rborist model gave similar results
+```{r out.width = "100%", echo = FALSE}
+kable(results_Rborist, caption = "Performance of the Rborist model (vs. evaluation)")
+```
+
+With the following confusion matrix.
+
+```{r out.width = "100%", echo = FALSE}
+kable(CM_Rborist_final$table, caption = "Confusion Matrix of the Rborist model (vs. evaluation)")
+```  
+And final accuracy equal to `r CM_Rborist_final$overall["Accuracy"]`, with a 95% confidence interval of [`r round(CM_Rborist_final$overall["AccuracyLower"], 4)`; `r round(CM_Rborist_final$overall["AccuracyUpper"], 4)`]. The Rborist model, while giving comparable results to the Ranger one, was sensibly slower (`r time_Rborist` min).
 
 *Section that presents the modeling results and discusses the model performance.*
 
@@ -559,7 +571,7 @@ This study showed that given particular selection conditions imposed by circumst
 \paragraph*{}
 This bi-criteria model, while already quite efficient (*Sens* = `r round(results_biclass["Sensitivity"], 3)`, *Spec* = `r round(results_biclass["Specificity"], 3)`, *F1* = `r round(results_biclass["F1"], 3)`) did not fully achieve the specificity requirement against the evaluation dataset.
 \paragraph*{}
-The best classification tools were random forest models : ranger and Rborist, which both gave perfect sensitivity and specificity values. rFerns, while also being a random forest model, was much less accurate.
+The best classification tools were random forest models : ranger and Rborist, which both gave perfect sensitivity and specificity values, but with ranger being about `r round(time_Rborist/time_ranger)` times faster. The rFerns model, while also being based on random forests, was much less accurate.
 *Section that gives a brief summary of the report, its limitations and future work*
 
 \newpage

@@ -699,20 +699,27 @@ results_biclass <- round(results_biclass, 4)
 bi_perf_comp <- rbind(best_margin2[2:4], results_biclass)
 rownames(bi_perf_comp) <- c("Evaluation", "Validation")
 
-
+start_time <- Sys.time()     # Start chronometer
 cmd <- paste0("train(class ~ ., method = 'ranger', data = trainvalid_set,", set_ranger_best[2], ")") # Build command
 fit_ranger_final <- eval(parse(text = cmd))     # Run command
 pred_ranger_final <- predict(object = fit_ranger_final, newdata = evaluation_set)
 CM_ranger_final <- confusionMatrix(data = pred_ranger_final, reference = evaluation_set$class)
 results_ranger <- c(CM_ranger_final$byClass["Sensitivity"], CM_ranger_final$byClass["Specificity"], CM_ranger_final$byClass["F1"])
 results_ranger <- round(results_ranger, 4)
+end_time <- Sys.time()     # Stop chronometer
+time_ranger <- difftime(end_time, start_time)
+time_ranger <- time_ranger %>% as.numeric %>% round(.,2)
 
+start_time <- Sys.time()     # Start chronometer
 cmd <- paste0("train(class ~ ., method = 'Rborist', data = trainvalid_set,", set_Rborist_best[2], ")") # Build command
 fit_Rborist_final <- eval(parse(text = cmd))     # Run command
 pred_Rborist_final <- predict(object = fit_Rborist_final, newdata = evaluation_set)
 CM_Rborist_final <- confusionMatrix(data = pred_Rborist_final, reference = evaluation_set$class)
 results_Rborist <- c(CM_Rborist_final$byClass["Sensitivity"], CM_Rborist_final$byClass["Specificity"], CM_Rborist_final$byClass["F1"])
 results_Rborist <- round(results_Rborist, 4)
+end_time <- Sys.time()     # Stop chronometer
+time_Rborist <- difftime(end_time, start_time)
+time_Rborist <- time_Rborist %>% as.numeric %>% round(.,2)
 
 # Get object list sizes and clean environment
 object_list <- objects() 
