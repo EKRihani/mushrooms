@@ -383,7 +383,7 @@ The *set.seed* insures reproducibility, the *trainControl* function allows to co
 This block was included in a function to allow easy access and reproducibility. The function returns a list that can be plotted and also includes various data of interest, such as .\$results (ROC, Sensibility, Specificity), .\$bestTune (best value with the evaluation metric, Specificity in this case), and .\$finalModel (miscellanous information that can sometimes be plotted, such as trees).
 
 \subsubsection{Linear Discriminant Analysis Models}  
-The two Linear Discriminant Analysis Models selected for this study are lda2 (Linear Discriminant Analysis) and pda (Penalized Discriminant Analysis). The lda2 model has one tuning parameter (*dimen*, number of discriminant functions). The pda model also has a single tuning parameter (*lambda*, shrinkage penalty coefficient).
+The two Linear Discriminant Analysis Models selected for this study are lda2 (Linear Discriminant Analysis) and pda (Penalized Discriminant Analysis). The lda2 model has one tuning parameter (*dimen*, number of discriminant functions). The pda model also has a single tuning parameter (*lambda*, shrinkage penalty coefficient).  
 
 ```{r, echo = FALSE, fig.height = 3, fig.cap = "Specificity of lda2 (left) and pda (right) models"}
 plot(ggarrange(
@@ -413,9 +413,9 @@ plot(ggarrange(
 )
 ```  
 \paragraph*{}
-The *degree* parameter of the gamLoess model does not seem to have much effect on specificity, with $\Delta Spec =$ `r round(max(fit_gamLoess_degree_results[,"Spec"]) - min(fit_gamLoess_degree_results[,"Spec"]), 3)`). 
+The *degree* parameter of the gamLoess model does not seem to have much effect on specificity, with $\Delta Spec =$ `r round(max(fit_gamLoess_degree_results[,"Spec"]) - min(fit_gamLoess_degree_results[,"Spec"]), 3)`. 
 \paragraph*{}
-The *span* parameter marginally affects the specificity of the gamLoess model, with an optimal value of *span* =`r fit_gamLoess_span_results[which.max(fit_gamLoess_span_results[,"Spec"]), "span"]`, that gives $Spec_{max} =$ `r round(max(fit_gamLoess_span_results["Spec"]), 3)` vs `r round(best_margin2["Specificity"], 4)`).
+The *span* parameter marginally affects the specificity of the gamLoess model, with an optimal value of *span* = `r fit_gamLoess_span_results[which.max(fit_gamLoess_span_results[,"Spec"]), "span"]`, that gives $Spec_{max} =$ `r round(max(fit_gamLoess_span_results["Spec"]), 3)` vs `r round(best_margin2["Specificity"], 4)`).
 \paragraph*{}
 The specificity this model does not meet the required specificity level for this study. The GamLoess model actually proved to be inferior to the 2-criteria classifier in both specificity (`r round(max(fit_gamLoess_span_results["Spec"]), 3)` vs `r best_margin2["Specificity"]`) and sensitivity (`r round(max(fit_gamLoess_span_results["Sens"]), 3)` vs `r best_margin2["Sensitivity"]`).
 
@@ -447,16 +447,17 @@ plot(ggarrange(
    )
 )
 ```
+
 The best predicted specificity would be achieved with *cp =* `r fit_rpartcost_complexity_bestTune['cp']` and *Cost = * `r fit_rpartcost_cost_bestTune['Cost']`.
 
 ```{r, echo = FALSE}
 
 kable(fit_rpartcost_best_results[,c(1:2,4:5)], digits = 5, caption = "Performance of the CART (rpartCost) model")
 ```
-The performance, while very good, did not achieve the specificity criterion.
 
+The performance, while very good, did not achieve the specificity requirement.
 \paragraph*{}
-The last tree-based models was the c5.0tree. This model doesn't have any tuning parameter.
+The last tree-based models was the C5.0tree. This model doesn't have any tuning parameter.
 
 ```{r, echo = FALSE}
 kable(fit_c50tree_results[,2:4], digits = 5, caption = "Performance of the C5.0 Tree (C5.0Tree) model")
@@ -466,6 +467,7 @@ Quite interestingly, despite have no tuning parameter, this model gave excellent
 
 \newpage
 \subsubsection{Random Forest Models}
+\paragraph*{}
 The Random Ferns (rFerns) model has only one parameter : depth.
 
 ```{r, echo = FALSE, fig.height = 3, fig.cap = "Specificity of Random Ferns model"}
@@ -486,12 +488,13 @@ plot(ggarrange(
    )
 )
 ```
-The preliminary tuning step showed very promising results : even with a low number of trees (*n* = 6), the required specificity was already achieved on several occurrences with single-parameter tuning. With optimal parameters (*min.node.size* = `r fit_ranger_nodesize_bestTune$min.node.size`, *mtry* = `r fit_ranger_splitrule_bestTune$mtry` and *splitrule* = `r fit_ranger_splitrule_bestTune$splitrule`).
+
+The preliminary tuning step showed very promising results : even with a low number of trees (*n* = 6), the required specificity was already achieved on several occurrences with single-parameter tuning. Tuning this model with optimal parameters (*min.node.size* = `r fit_ranger_nodesize_bestTune$min.node.size`, *mtry* = `r fit_ranger_splitrule_bestTune$mtry` and *splitrule* = `r fit_ranger_splitrule_bestTune$splitrule`) gave interesting results.
 
 ```{r, echo = FALSE}
 kable(fit_ranger_best_results[1:6], caption = "Performance of the Ranger model (optimal settings)")
 ```
-This model achieved excellent results, giving perfect specificity and sensitivity in this evaluation phase.
+This model achieved excellent performance, giving perfect specificity and sensitivity in this evaluation phase.
 \paragraph*{}
 The last random forest model was provided by Rborist. The caret package mentions two tuning parameters for this mode : number of trial predictors for a split (*predFixed*) and minimum number of distinct row references to split a node (*minNode*).
 
@@ -520,7 +523,7 @@ The Rborist model gave the same excellent results as the Ranger one, with perfec
 These results underline an interesting fact : not all random forest models are created equal. In preliminary studies, some random forest models proved to be extremely slow, some were considerably faster. This study also shows the considerable difference in sensitivity and specificity between the rFerns and the Ranger or Rborist random forest models.
 
 \subsection{Memory Optimization}
-During the building of this study, an unforeseen and unfortunate event resulted into the addition of a secondary goal : the code had to be able to handle a `r summary_number` $\times$ `r nrow(structure_dataset)` dataset and run on lower-end computers, with only 4GB RAM + 4GB swap. Memory optimization was an interesting challenge, and implied :
+During the building of this study, an unforeseen and unfortunate event resulted into the addition of a secondary goal : the code had to be able to handle a `r summary_number` $\times$ `r nrow(structure_dataset)` dataset and run on lower-end computers, with only 4GB RAM + 6GB swap. Memory optimization was an interesting challenge, and implied :
 
 * Image saving on hard drive before environment cleaning,
 * Identification and removal of obsolete intermediate values,
@@ -598,13 +601,13 @@ The final evaluation of the Ranger gave the following confusion matrix.
 ```{r out.width = "100%", echo = FALSE}
 kable(CM_ranger_final$table, caption = "Confusion Matrix of the Ranger model (vs. evaluation)")
 ```  
-The final accuracy was equal to `r CM_ranger_final$overall["Accuracy"]`, with a 95% confidence interval of [`r round(CM_ranger_final$overall["AccuracyLower"], 4)`; `r round(CM_ranger_final$overall["AccuracyUpper"], 4)`]. The ranger model provided excellent results, in a very reasonable amount of time (`r time_ranger` min).
+The final accuracy was equal to `r CM_ranger_final$overall["Accuracy"]`, with a 95% confidence interval of [`r round(CM_ranger_final$overall["AccuracyLower"], 4)` ; `r round(CM_ranger_final$overall["AccuracyUpper"], 4)`]. The ranger model provided excellent results, in a very reasonable amount of time (`r time_ranger` min).
 \paragraph*{}
-The Rborist model gave similar results with a final accuracy equal to `r CM_Rborist_final$overall["Accuracy"]`, with a 95% confidence interval of [`r round(CM_Rborist_final$overall["AccuracyLower"], 4)`; `r round(CM_Rborist_final$overall["AccuracyUpper"], 4)`]. The Rborist model, while giving comparable results to the Ranger one, was sensibly slower (`r time_Rborist` min), although being run with a lower number of trees (*n* = 3 vs 10).
+The Rborist model gave similar results with a final accuracy equal to `r CM_Rborist_final$overall["Accuracy"]`, with a 95% confidence interval of [`r round(CM_Rborist_final$overall["AccuracyLower"], 4)` ; `r round(CM_Rborist_final$overall["AccuracyUpper"], 4)`]. The Rborist model, while giving comparable results to the Ranger one, was sensibly slower (`r time_Rborist` min), despite being run with a lower number of trees (*n* = 3 vs 10).
 
 
 ```{r out.width = "100%", echo = FALSE}
-kable(rt_result, caption = "Performance of the Ranger and Rborist models (vs. evaluation)")
+kable(rt_result, caption = "Ranger and Rborist models performance (vs. evaluation)")
 ```  
 
 <!--- Section that presents the modeling results and discusses the model performance. --->
@@ -612,7 +615,7 @@ kable(rt_result, caption = "Performance of the Ranger and Rborist models (vs. ev
 \newpage
 \section{Conclusion}
 
-Species identification is a classic classification task, traditionnally performed by humans using a classification tree strategy. 
+Species identification is a classic classification task, traditionally performed by humans using a classification tree strategy. 
 \paragraph*{}
 This study showed that given particular selection conditions imposed by circumstances (toxic mushrooms shouldn't be classified as edible, i.e. *Specificity* = 1), a significant amount of modelling strategies were giving insufficient results, and proved to be inferior to even a quite basic *ad-hoc* bi-criteria classification model.
 \paragraph*{}
@@ -626,7 +629,7 @@ Apart from the limitations of the starting dataset, this work has some notable l
 * The basic classifier code could definitely be optimized and make more use of vectorization,
 * Parameter optimization was based on the caret package documentation, which doesn't mention all parameters,
 * Parallelization could be an interesting strategy to make some computations much faster,
-* The report didn't use dynamic references.
+* Reproductibility could be improved between Linux/Windows systems on R 3.6/4.0, especially on the report output.
 
 \paragraph*{}
 This study will provide a good basis for further personal work and experimentation on these three aspects.
