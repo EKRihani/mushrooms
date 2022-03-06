@@ -24,15 +24,15 @@ library(GGally)
 library(caret)
 
 # Get, decompress, import data file
-URL <- "https://archive.ics.uci.edu/ml/machine-learning-databases/00615/MushroomDataset.zip"
-#URL <- "https://github.com/EKRihani/mushrooms/raw/master/MushroomDataset.zip"  # Alternative URL
+URL <- "https://archive.ics.uci.edu/ml/machine-learning-databases/00615/MushroomDataset.zip"    # UCI archive
+#URL <- "https://github.com/EKRihani/mushrooms/raw/master/MushroomDataset.zip"      # Alternative URL
 
 datafile <- tempfile()
 download.file(URL, datafile)
 datafile <- unzip(datafile, "MushroomDataset/secondary_data.csv")
 dataset <- read.csv(datafile, header = TRUE, sep = ";")
 
-# Define function : return object size in Mb
+# Define function : Return object size in Mb
 obj_size <- function(fcn_object){
    object <- eval(parse(text = fcn_object))
    size <- format(object.size(object), units = "Mb")
@@ -45,13 +45,13 @@ obj_size <- function(fcn_object){
 #  DATA FORMATTING / CLEANING  #
 ################################
 
-# Get initial dataset structure informations
+# Get initial dataset structure information
 structure_initial <- sapply(X = dataset, FUN = class, simplify = TRUE)  # Get all initial dataset variables classes
 unique_length <- function (x) {length(unique(x))}                       # Define function : count levels of a variable
 structure_uniques <- sapply(dataset, FUN = unique_length)               # Count levels of all dataset variables
 
 
-# What is "stem.root = f" ? The metadata doesn't indicate it, let's find out...
+# What is "stem.root = f" ? The metadata didn't indicate it, let's find out...
 data_missing_f <- dataset %>% 
    filter(stem.root == "f") %>% 
    select(stem.root, stem.color, stem.surface, stem.width, stem.height) # select all useful (i.e. stem.x) properties
@@ -113,12 +113,12 @@ test_index <- createDataPartition(y = trainvalid_set$cap.diameter, times = 1, p 
 training_set <- trainvalid_set[-test_index,]
 validation_set <- trainvalid_set[test_index,]
 
-# Plot all monovariate distributions of the training+validation set
+# Plot all monovariate distributions of the (training+validation) set
 l <- nrow(structure_dataset)
 for (n in 1:l){
    plot_title <- paste("Mushroom", dataset_names[n], "distribution")
    plot <- trainvalid_set %>%
-      ggplot(aes_string(x = dataset_names[n])) + #aes_string allows use of string instead of variable name
+      ggplot(aes_string(x = dataset_names[n])) +      #aes_string allows use of string instead of variable name
       ggtitle(plot_title) +
       ylab("") +
       xlab(dataset_names[n]) +
@@ -128,7 +128,7 @@ for (n in 1:l){
    else
    {plot <- plot + geom_bar(fill = "gray45")}
    plotname <- paste0("study_distrib_", dataset_names[n])   # Concatenate "plot_distrib" with the column name
-   assign(plotname, plot)     # Assign the plot to the plot_distrib_colname name
+   assign(plotname, plot)                 # Assign the plot to the plot_distrib_colname name
 }
 
 ########################################################
@@ -141,14 +141,14 @@ factors_list <- training_set %>%
    gather(factor, level) %>% 
    unique() %>% 
    select(factor, level) %>% 
-   filter(factor != "class")  # Get all factor|logical levels
+   filter(factor != "class")     # Get all factor|logical levels
 
 factors_type <- training_set %>% 
    summary.default %>% 
    as.data.frame %>% 
    group_by(Var1) %>% 
    spread(Var2, Freq) %>% 
-   as.data.frame   # Get training_set structure
+   as.data.frame        # Get training_set structure
 
 factors_type$Class <- if_else(factors_type$Class == "-none-", factors_type$Mode, factors_type$Class)     # Create coherent Class column
 
@@ -218,7 +218,7 @@ single_crit_search <- function(fcn_training, fcn_crit_list, fcn_margin){
             filter(class == "poisonous", get(fcn_crit_list$factor[n]) == fcn_crit_list$level[n]) %>% 
             nrow() == 0  # Find if (for this factor/level combination) there are no poisonous, i.e. ONLY edible species
       }
-      else          # Type = integer or numeric
+      else          # If type is integer or numeric
       {
          minmax <- minmaxing(fcn_crit_list$level[n], fcn_margin)     # Setting min/max and rounding values for ".$level"
          current_val <- fcn_training %>% 
@@ -251,7 +251,7 @@ dual_crit_search <- function(fcn_training, fcn_crit_list, fcn_margin){
             nrow
          fcn_crit_list$all_edible[n] <- count != 0 & count_poison == 0 # Find if (for this factor/level combination) there are mushrooms AND no poisonous, i.e. ONLY edible species
       }
-      else          # factor1 is text & factor2 is number
+      else          # if factor1 is text & factor2 is number
       {if(fcn_crit_list$type1[n] %in% c("logical", "factor", "character") & fcn_crit_list$type2[n] %in% c("numeric", "integer"))
       {
          minmax <- minmaxing(fcn_crit_list$level2[n], fcn_margin)
@@ -265,7 +265,7 @@ dual_crit_search <- function(fcn_training, fcn_crit_list, fcn_margin){
          fcn_crit_list$all_edible[n] <- current_val != extremum
          fcn_crit_list$level2[n] <- infsup(crit_list_name, current_val, minmax, 2, n)
       }
-         else     # factor1 & factor2 are numbers
+         else     # if factor1 & factor2 are numbers
          {
             minmax1 <- minmaxing(fcn_crit_list$level1[n], fcn_margin)
             minmax2 <- minmaxing(fcn_crit_list$level2[n], fcn_margin)
@@ -308,7 +308,8 @@ single_remove <- function(fcn_singlecritlist, fcn_dualcritlist){
    fcn_dualcritlist[-single_crit_index,]
 }
 
-# Define functions : convert all text factors into criteria strings for the prediction step
+# Define functions : convert all text factors into criteria strings for the prediction step 
+#Single-crit-strings : get and concatenate CRIT + "==/>/<" + LEVEL + "|" ....
 crit2string1 <- function(fcn_singlecritlist){
    str_factors1 <- fcn_singlecritlist %>% 
       filter(all_edible == TRUE, type %in% c("factor", "logical", "character")) %>% 
@@ -318,7 +319,7 @@ crit2string1 <- function(fcn_singlecritlist){
       rbind(str_factors1, .)
    paste(single_criteria$factor, single_criteria$level, collapse = " | ")
 }
-
+#Dual-crit-strings : get and concatenate CRIT1 + "==/>/<" + LEVEL1 + "&" + CRIT2 + "==/</>" + LEVEL2 "|" ....
 crit2string2 <- function(fcn_singlecritlist, fcn_dualcritlist){
    mono_criteria_list <- crit2string1(fcn_singlecritlist)
    str_factors2f <- fcn_dualcritlist %>% 
@@ -374,19 +375,19 @@ CM_bicrit <- confusionMatrix(data = predictions$bi_predict, reference = predicti
 
 # Define functions : get sensitivity/specificity according to margin, for single-crit tuning
 tuning1a <- function(fcn_trainset, fcn_factorlist, fcn_margin){
-   factlistname <- deparse(substitute(fcn_factorlist))            # Get factor list name as string
+   factlistname <- deparse(substitute(fcn_factorlist))               # Get factor list name as string
    SCS <- paste0("single_crit_search(fcn_trainset, ", factlistname, ", fcn_margin)")      # Create single-search string
-   fact_list <- eval(parse(text = SCS))            # Evaluate single-search string (or nested functions will not detect accurately the original factor list name)
+   fact_list <- eval(parse(text = SCS))               # Evaluate single-search string (or nested functions will not detect accurately the original factor list name)
    critlist_prediction <- crit2string1(fact_list)
-   predictions$tuning <- FALSE
-   predictions <- predictions %>% mutate(tuning = eval(parse(text = critlist_prediction[[1]])))
+   predictions$tuning <- FALSE                  # Set .$tuning to false by default
+   predictions <- predictions %>% mutate(tuning = eval(parse(text = critlist_prediction[[1]])))    # Switch .$tuning to TRUE if criterion is met
    predictions$tuning <- as.factor(predictions$tuning)
    CM <- confusionMatrix(data = predictions$tuning, reference = predictions$reference, positive = "TRUE")
    sensitivity <- round(CM$byClass["Sensitivity"], 4)
    specificity <- round(CM$byClass["Specificity"], 4)
    F1 <- round(CM$byClass["F1"], 4)
    names(fcn_margin) <- "Margin"
-   c(fcn_margin, sensitivity, specificity, F1)
+   c(fcn_margin, sensitivity, specificity, F1)    # Output 1-crit margin, sensitivity, specificity, F1-Score
 }
 
 tuning2a <- function(fcn_trainset, fcn_factorlist1, fcn_factorlist2, fcn_margin2){
@@ -394,17 +395,18 @@ tuning2a <- function(fcn_trainset, fcn_factorlist1, fcn_factorlist2, fcn_margin2
    DCS <- paste0("dual_crit_search(fcn_trainset, ", factlistname2, ", fcn_margin2)")      # Create dual-search string
    fact2_list <- eval(parse(text = DCS))            # Evaluate dual-search string (or nested functions will not detect accurately the original factor list name)
    critlist_prediction <- crit2string2(fcn_factorlist1, fact2_list)
-   predictions$tuning <- FALSE
-   predictions <- predictions %>% mutate(tuning = eval(parse(text = critlist_prediction[[2]])))
+   predictions$tuning <- FALSE                  # Set .$tuning to false by default
+   predictions <- predictions %>% mutate(tuning = eval(parse(text = critlist_prediction[[2]])))    # Switch .$tuning to TRUE if criteria are met
    predictions$tuning <- as.factor(predictions$tuning)
    CM <- confusionMatrix(data = predictions$tuning, reference = predictions$reference, positive = "TRUE")
    sensitivity <- round(CM$byClass["Sensitivity"], 4)
    specificity <- round(CM$byClass["Specificity"], 4)
    F1 <- round(CM$byClass["F1"], 4)
    names(fcn_margin2) <- "Margin"
-   c(fcn_margin2, sensitivity, specificity, F1)
+   c(fcn_margin2, sensitivity, specificity, F1)    # Output 2-crit margin, sensitivity, specificity, F1-Score
 }
 
+# Define functions : synthetic tuning functions (need only one input)
 tuning1b <- function(fcn_margin){
    tuning1a(training_set, factors_list1, fcn_margin)
 }
@@ -542,7 +544,7 @@ set_lda2_dim <- c("lda2", "tuneGrid  = data.frame(dimen = seq(from = 1, to = 16,
 set_pda_lambda <-  c("pda", "tuneGrid  = data.frame(lambda = seq(from = 1, to = 51, by = 10))")
 fit_lda2_dim <- fit_test(set_lda2_dim)
 fit_pda_lambda <- fit_test(set_pda_lambda)
-# Extract results of interest
+# Extract results of interest : plots and results
 fit_lda2_dim_plot <- ggplot(fit_lda2_dim)
 fit_lda2_dim_results <- fit_lda2_dim$results
 fit_pda_lambda_plot <- ggplot(fit_pda_lambda)
@@ -553,7 +555,7 @@ set_gamLoess_span <-  c("gamLoess", "tuneGrid  = data.frame(span = seq(from = 0.
 set_gamLoess_degree <-  c("gamLoess", "tuneGrid  = data.frame(degree = c(0, 1), span = 0.5)")
 fit_gamLoess_span <- fit_test(set_gamLoess_span)
 fit_gamLoess_degree <- fit_test(set_gamLoess_degree)
-# Extract results of interest
+# Extract results of interest : plots and results
 fit_gamLoess_span_plot <- ggplot(fit_gamLoess_span)
 fit_gamLoess_span_results <- fit_gamLoess_span$results
 fit_gamLoess_degree_plot <- ggplot(fit_gamLoess_degree)
@@ -570,7 +572,7 @@ fit_rpartcost_complexity <- fit_test(set_rpartcost_complexity)
 fit_rpartcost_cost <- fit_test(set_rpartcost_cost)
 fit_ctree_criterion <- fit_test(set_ctree_criterion)
 fit_c50tree <- fit_test(set_c50tree)
-# Extract results of interest
+# Extract results of interest : plots and results
 fit_rpart_cp_results <- fit_rpart_cp$results
 fit_rpartcost_complexity_plot <- ggplot(fit_rpartcost_complexity)
 fit_rpartcost_complexity_results <- fit_rpartcost_complexity$results
@@ -590,7 +592,7 @@ fit_rpartcost_best_results <- fit_rpartcost_best$results
 
 names(tree_varimp) <- c("CART", "ctree")
 # Get object list sizes and clean environment
-#save.image(file = "EKR-mushrooms-dump2.RData")        # Save everything before environment cleaning
+save.image(file = "EKR-mushrooms-dump2.RData")        # Save everything before environment cleaning
 object_list <- objects() 
 sizes_list2 <- sapply(X = object_list, FUN = obj_size)
 rm(fit_lda2_dim, fit_pda_lambda)
@@ -611,8 +613,7 @@ fit_ranger_splitrule <- fit_test(set_ranger_splitrule)
 fit_ranger_nodesize <- fit_test(set_ranger_nodesize)
 fit_Rborist_pred <- fit_test(set_Rborist_pred)
 fit_Rborist_minNode <- fit_test(set_Rborist_minNode)
-
-# Extract results of interest
+# Extract results of interest : plots and results
 fit_rFerns_depth_plot <- ggplot(fit_rFerns_depth)
 fit_rFerns_depth_results <- fit_rFerns_depth$results
 fit_ranger_mtry_plot <- ggplot(fit_ranger_mtry)
@@ -646,7 +647,7 @@ fit_Rborist_best <- fit_test(set_Rborist_best)
 fit_Rborist_best_results <- fit_Rborist_best$results
 
 # Get object list sizes and clean environment (fit_rFerns size is > 1 GB !)
-#save.image(file = "EKR-mushrooms-dump3.RData")        # Save everything before environment cleaning
+save.image(file = "EKR-mushrooms-dump3.RData")        # Save everything before environment cleaning
 object_list <- objects() 
 sizes_list3 <- sapply(X = object_list, FUN = obj_size)
 rm(fit_rFerns_depth, fit_ranger_mtry, fit_ranger_splitrule, fit_ranger_nodesize, fit_ranger_best, 
