@@ -570,16 +570,12 @@ set_rpartcost_cost <- c("rpartCost", "tuneGrid  = data.frame(Cost = c(0.01, 0.4,
 set_ctree_criterion <- c("ctree", "tuneGrid  = data.frame(mincriterion = c(0.01, 0.25, 0.5, 0.75, 0.99))")
 set_c50tree <- c("C5.0Tree", "")
 fit_rpart_cp <- fit_test(set_rpart_cp)
-fit_rpart_example <- fit_test(c("rpart", "tuneGrid  = data.frame(cp = 0.014)"))
 fit_rpartcost_complexity <- fit_test(set_rpartcost_complexity)
 fit_rpartcost_cost <- fit_test(set_rpartcost_cost)
 fit_ctree_criterion <- fit_test(set_ctree_criterion)
 fit_c50tree <- fit_test(set_c50tree)
 # Extract results of interest
-fit_rpart_cp_tree <- plot(fit_rpart_cp$finalModel)
 fit_rpart_cp_results <- fit_rpart_cp$results
-fit_rpart_example_tree <- plot(fit_rpart_example$finalModel, margin = 0.1)
-fit_rpart_example_text <- text(fit_rpart_example$finalModel, cex = 0.6)
 fit_rpartcost_complexity_plot <- ggplot(fit_rpartcost_complexity)
 fit_rpartcost_complexity_results <- fit_rpartcost_complexity$results
 fit_rpartcost_complexity_bestTune <- fit_rpartcost_complexity$bestTune
