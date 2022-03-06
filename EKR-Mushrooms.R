@@ -547,10 +547,6 @@ fit_lda2_dim_plot <- ggplot(fit_lda2_dim)
 fit_lda2_dim_results <- fit_lda2_dim$results
 fit_pda_lambda_plot <- ggplot(fit_pda_lambda)
 fit_pda_lambda_results <- fit_pda_lambda$results
-# Compute variable importances
-da_varimp <- cbind(varImp(fit_lda2_dim)$importance["edible"], 
-                   varImp(fit_pda_lambda)$importance["edible"])
-names(da_varimp) <- c("lda2", "pda")
 
 # Generalized Additive Model
 set_gamLoess_span <-  c("gamLoess", "tuneGrid  = data.frame(span = seq(from = 0.01, to = 1, by = 0.24), degree = 1)")
@@ -591,10 +587,7 @@ set_rpartcost_best <- c("rpartCost", paste0("tuneGrid  = data.frame(cp = ",
                                             ", Cost = ", fit_rpartcost_cost$bestTune$Cost, ")" ))
 fit_rpartcost_best <- fit_test(set_rpartcost_best)
 fit_rpartcost_best_results <- fit_rpartcost_best$results
-# Compute variable importances
-tree_varimp <- cbind(varImp(fit_rpartcost_best)$importance["edible"],
-                     varImp(fit_ctree_criterion)$importance["edible"]
-)
+
 names(tree_varimp) <- c("CART", "ctree")
 # Get object list sizes and clean environment
 #save.image(file = "EKR-mushrooms-dump2.RData")        # Save everything before environment cleaning
@@ -651,8 +644,6 @@ set_Rborist_best <- c("Rborist", paste0("tuneGrid  = data.frame(predFixed = 6, "
                                         ", ntrees = 3"))
 fit_Rborist_best <- fit_test(set_Rborist_best)
 fit_Rborist_best_results <- fit_Rborist_best$results
-# Compute variable importances
-rf_varimp <- varImp(fit_rFerns_depth)$importance["edible"]
 
 # Get object list sizes and clean environment (fit_rFerns size is > 1 GB !)
 #save.image(file = "EKR-mushrooms-dump3.RData")        # Save everything before environment cleaning
@@ -662,7 +653,7 @@ rm(fit_rFerns_depth, fit_ranger_mtry, fit_ranger_splitrule, fit_ranger_nodesize,
    fit_Rborist_pred, fit_Rborist_minNode, fit_Rborist_best)
 gc()
 
-# For complete factor combinations testing (SUPER SLOW) : Compute and Plot
+# For complete factor combinations testing (SUPER SLOW)
 # set_ranger <- c("ranger", "tuneGrid = expand.grid(mtry = seq(from = 1, to = 21, by = 5),
 #                                                 splitrule = c('gini', 'extratrees'),
 #                                                 min.node.size = seq(from = 1, to = 16, by = 5)
@@ -692,8 +683,10 @@ evaluation$reference <- as.factor(evaluation$reference)
 evaluation$bi_predict <- as.factor(evaluation$bi_predict)
 CM_bifinal <- confusionMatrix(data = evaluation$bi_predict, reference = evaluation$reference, positive = "TRUE")
 
-results_biclass <- c(CM_bifinal$byClass["Sensitivity"], CM_bifinal$byClass["Specificity"], CM_bifinal$byClass["F1"])
-results_biclass <- round(results_biclass, 4)
+results_biclass <- data.frame(Sensitivity = c(CM_bifinal$byClass["Sensitivity"]),
+                              Specificity = c(CM_bifinal$byClass["Specificity"]), 
+                              F1 = c(CM_bifinal$byClass["F1"]))
+rownames(results_biclass) <- "2-crit"
 
 # Bi-classifier performance comparison table : validation vs evaluation
 bi_perf_comp <- rbind(best_margin2[2:4], results_biclass)
@@ -708,7 +701,6 @@ results_ranger <- c(CM_ranger_final$byClass["Sensitivity"], CM_ranger_final$byCl
 end_time <- Sys.time()     # Stop chronometer
 time_ranger <- difftime(end_time, start_time)
 time_ranger <- time_ranger %>% as.numeric %>% round(.,2)
-
 
 start_time <- Sys.time()            # Start chronometer
 cmd <- paste0("train(class ~ ., method = 'Rborist', data = trainvalid_set,", set_Rborist_best[2], ")") # Build command
