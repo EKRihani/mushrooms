@@ -590,14 +590,13 @@ set_rpartcost_best <- c("rpartCost", paste0("tuneGrid  = data.frame(cp = ",
 fit_rpartcost_best <- fit_test(set_rpartcost_best)
 fit_rpartcost_best_results <- fit_rpartcost_best$results
 
-names(tree_varimp) <- c("CART", "ctree")
 # Get object list sizes and clean environment
 save.image(file = "EKR-mushrooms-dump2.RData")        # Save everything before environment cleaning
 object_list <- objects() 
 sizes_list2 <- sapply(X = object_list, FUN = obj_size)
 rm(fit_lda2_dim, fit_pda_lambda)
 rm(fit_gamLoess_span, fit_gamLoess_degree)
-rm(fit_rpartcost_complexity, fit_rpartcost_cost, fit_rpart_cp, fit_rpart_example, fit_ctree_criterion, fit_c50tree, fit_rpartcost_best)
+rm(fit_rpartcost_complexity, fit_rpartcost_cost, fit_rpart_cp, fit_ctree_criterion, fit_c50tree, fit_rpartcost_best)
 gc()
 
 # Random Forest Models

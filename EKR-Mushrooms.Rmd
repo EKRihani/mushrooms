@@ -581,7 +581,7 @@ All models were trained on the training dataset, set with the best hyperparamete
 \paragraph*{}
 Running the dual criteria classifier against the evaluation dataset yields the following results :
 ```{r out.width = "100%", echo = FALSE}
-kable(results_biclass, caption = "Performance of the bi-criteria classifier (vs. evaluation)")
+kable(results_biclass, digits = 4, caption = "Performance of the bi-criteria classifier (vs. evaluation)")
 ```
 \paragraph*{}
 The confusion matrix shows more accurately the results : while `r CM_bifinal$table[2,2]` of the `r sum(CM_bifinal$table[,2])` edible specimen were accurately identified, `r CM_bifinal$table[2,1]` non-edible specimen were incorrectly classified as edible.  
@@ -592,7 +592,7 @@ kable(CM_bifinal$table, caption = "Confusion Matrix of the bi-criteria classifie
 While the model performance is quite honorable, it is not sufficient to completely fulfill the specificity criterion, which was the primary endpoint of this study. A performance decrease between the validation and evaluation stage can typically be attributed to overfitting. It is thus important to find if the performance difference is significant.
 \paragraph*{}
 ```{r out.width = "100%", echo = FALSE}
-kable(bi_perf_comp, caption = "Comparison of performance metrics of the bi-criteria classifier")
+kable(bi_perf_comp, digits = 4, caption = "Comparison of performance metrics of the bi-criteria classifier")
 ```  
 The performance difference does not seem to be significant, and the lower specificity just seems to be a result of a trade-off between sensitivity and specificity. The absence of significant overfitting can also be confirmed by the slight increase of the F1 score during the validation stage.
 
@@ -608,7 +608,7 @@ The Rborist model gave similar results with a final accuracy equal to `r CM_Rbor
 
 
 ```{r out.width = "100%", echo = FALSE}
-kable(rt_result, caption = "Ranger and Rborist models performance (vs. evaluation)")
+kable(rt_result, digits = 4, caption = "Ranger and Rborist models performance (vs. evaluation)")
 ```  
 
 <!--- Section that presents the modeling results and discusses the model performance. --->
