@@ -9,6 +9,7 @@ if(!require(mda)) install.packages("mda", repos = "http://cran.us.r-project.org"
 if(!require(gam)) install.packages("gam", repos = "http://cran.us.r-project.org")              # Generalized Additive Models (gamLoess)
 if(!require(rpart)) install.packages("rpart", repos = "http://cran.us.r-project.org")          # Classification And Regression Tree (rpart, rpartCost)
 if(!require(plyr)) install.packages("plyr", repos = "http://cran.us.r-project.org")            # Needed for rpartCost
+if(!require(Formula)) install.packages("Formula", repos = "http://cran.us.r-project.org")      # Needed for C50
 if(!require(C50)) install.packages("C50", repos = "http://cran.us.r-project.org")              # C5.0 models (c50tree)
 if(!require(party)) install.packages("party", repos = "http://cran.us.r-project.org")          # Conditional Inference Tree (ctree)
 if(!require(ranger)) install.packages("ranger", repos = "http://cran.us.r-project.org")        # Random Forest, fast implementation (ranger)
@@ -739,5 +740,4 @@ sizes_list <- cbind(rownames(sizes_list), data.frame(sizes_list, row.names=NULL)
 sizes_list <- sizes_list[order(-sizes_list$sizes_list),]
 names(sizes_list) <- c("object", "size (Mb)")
 
-save.image(file = "EKR-mushrooms.RData")
-load("EKR-mushrooms.RData")
+save.image(file = "EKR-mushrooms.RData")     # Save data for report
