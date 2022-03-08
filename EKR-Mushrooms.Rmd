@@ -60,7 +60,6 @@ references:
       year: 1995
 
 csl: https://www.zotero.org/styles/vancouver-superscript
-#- \usepackage{indentfirst} # Indent first line of each paragraph
 ---
 
 ```{r setup, include = FALSE, warning=FALSE}
@@ -190,9 +189,22 @@ These issues underline the importance of providing extensive documentation, well
 
 \subsection{Training set analysis}
 \paragraph*{}
-The original dataset was first randomly split into a 90%-sized training/validation set, and a 10%-sized evaluation set that is not to be used until the final validation.
+The original dataset was first randomly split into a 90%-sized training/validation set, and a 10%-sized evaluation set that is not to be used until the final validation. All distributions were then plotted using a simple loop that gets the column names and a conditional branching that uses the structure to plot an histogram or a barplot (simplified code).
+```{r, eval = FALSE}
+for (n in 1:ncol(trainingset)){
+   plot <- trainingset %>%
+      ggplot(aes_string(x = colnames(trainingset)[n]))
+   if(structure_dataset$Final[n] %in% c("integer", "numeric"))
+      {plot <- plot + geom_histogram(fill = "gray45")}
+   else
+      {plot <- plot + geom_bar(fill = "gray45")}
+   plotname <- paste0("distrib_", colnames(trainingset)[n])
+   assign(plotname, plot)
+}
+```
+Using *aes_string* instead of the traditional *aes* allows to use a string as an argument.
 \paragraph*{}
-All dimensional distributions seem to roughly follow a bell curve (fig. 1), with a long tail towards the higher values. A logarithmic transformation (fig. 2) can show more clearly the shape of this tail.  
+Barplots didn't show anything remarkable, and thus weren't integrated in the report. However, dimensional distributions were more interesting : at first, they seemed to roughly follow a bell curve (fig. 1), with a long tail towards the higher values. A logarithmic transformation (fig. 2) can show more clearly the shape of this tail.  
 
 ```{r, echo = FALSE, fig.height = 2.5, fig.cap = "Mushroom cap diameter, stem height and stem width distribution"}
 plot(ggarrange(
@@ -214,7 +226,7 @@ plot(ggarrange(
 )
 ```
 
-The cap diameter distribution looks like a bell curve with a long right tail but actually is bimodal, with a main mode toward 5 cm, and a much smaller secondary mode toward 50 cm. This size can look quite surprising, but after further investigation, it appears that some species such as *Polyporus squamosus* (dryad's saddle) can be very large, with some specimens that can weight up to 5 kg.[@courtecuisse]
+The cap diameter distribution looks like a bell curve with a long right tail but actually is bimodal, with a main mode toward 5 cm, and a much smaller secondary mode toward 50 cm. This size can look very surprising, but after further investigation, it appears that some species such as *Polyporus squamosus* (dryad's saddle) can be very large, with some specimens that can weight up to 5 kg.[@courtecuisse]
 \paragraph*{}
 The stem height distribution also looks like a bell curve with a long right tail, a main mode around 5 cm, and a secondary mode at 0 cm. Again, this can look surprising, but some mushrooms have no stem, which could explain this height value.
 \paragraph*{}
@@ -241,8 +253,8 @@ plot(ggarrange(
    train_distrib_veil.color + ggtitle("Veil Color") + ggtitle("") + ylab("") + scale_y_log10(labels = NULL) + theme(axis.text.x = element_text(angle = 70, vjust = 1, hjust = 1))
    )
 )
-```  
-\paragraph*{}
+```
+
 Differences in the distribution of edible and non edible species can already be seen in the distribution plots, and these variations will be used to classify species.
 \paragraph*{}
 Given the specificity constraint mentioned previously, a "stupid" algorithm can be designed as a benchmark. This algorithm will simply classify all mushrooms as poisonous, by setting all edibility values to FALSE.
@@ -251,9 +263,9 @@ A slightly more elaborated algorithm can classify mushrooms as edible if they me
 \paragraph*{}
 A more sophisticated algorithm can be elaborated with two factors (fig. 4) and will for example, classify a mushroom as edible if *cap.shape* = convex & *cap.surface* = leathery.
 
-```{r, echo = FALSE, fig.height = 7, fig.cap = "Two-criteria plots for 5 criteria of interest"}
+```{r, echo = FALSE, fig.height = 7, fig.cap = "Two-criteria plots for 4 criteria of interest"}
 pair_plots
-```  
+```
 
 \newpage
 The building of this more performant model will be discussed here, since the single-criterion one is very similar and can be seen as a simplified version of the two-criteria model.
@@ -262,7 +274,7 @@ The very first step was to build the criteria list. All unique *factor* and *log
 \paragraph*{}
 The building of a comprehensive -- but not redundant -- 2-criteria list from this single criterion list is a four step process :
 
-1. Create a 2-index list with the *ncomb* function, which eliminates potential duplicates because of the commutative properties of the AND operator, i.e. (n,p) indices are equivalent to (p,n) ;
+1. Create a 2-index list with the *combn* function, which eliminates potential duplicates because of the commutative properties of the AND operator, i.e. (n,p) indices are equivalent to (p,n) ;
 2. Take each column to build the corresponding half-sized dataset, then merge the two halves ;
 3. Remove all single-criterion combinations, i.e. all (n,n) indices, that are dealt with a 1-criterion model ;
 4. Set all edibility criterion values to FALSE by default.
@@ -278,11 +290,11 @@ However, by construction, the fourth combination does not exist, which somewhat 
 \paragraph*{}
 After the type identification and a filtering step on the two relevant criteria, the basic classification strategy is as follows :
 
-* If text + text : count all occurrences, count all poisonous occurrences. If there are mushrooms, but none is poisonous, consider all of them as edible.
-* If text + numeric : compute min (or max, resp.) on all occurrences, and on all poisonous occurrences. If the values differ, consider all values below (or above, resp.) the poisonous occurrences to be all edible. Apply a settable safety margin.
-* If numeric + numeric : compute the two min (or max, resp.) on each criteria, on all occurrences and on all poisonous occurrences. If the values differ on each dimension, consider all values below (or above, resp.) the poisonous occurrences to be all edible. Apply a settable safety margin on each dimension.
+1. If text + text : count all occurrences, count all poisonous occurrences. If there are mushrooms, but none is poisonous, consider all of them as edible.
+2. If text + numeric : compute min (or max, resp.) on all occurrences, and on all poisonous occurrences. If the values differ, consider all values below (or above, resp.) the poisonous occurrences to be all edible. Apply a settable safety margin.
+3. If numeric + numeric : compute the two min (or max, resp.) on each criteria, on all occurrences and on all poisonous occurrences. If the values differ on each dimension, consider all values below (or above, resp.) the poisonous occurrences to be all edible. Apply a settable safety margin on each dimension.
 
-The min/max detection is very simply based on the "min" or "max" string found in *factors_listX$typeY*. A *match.fun* function converts this "min" or "max" string into a *min* or *max* function, a *recode.factor* function was then used to select the sign (+/-) of the margin to be applied. The "min" or "max" string was then concatenated to the computed numeric value, and converted into a > or < symbol, to be used in the evaluation step.
+The min/max detection function built for this study is very simply based on the "min" or "max" string added previously in *factors_listX$typeY*. A *match.fun* function converts this "min" or "max" string into a *min* or *max* function, then a *recode.factor* function is used to select the sign (+/-) of the margin to be applied. The "min" or "max" string is then concatenated to the computed numeric value, and converted into a > or < symbol, so the string *< min_value* or *> max_value* can directly be used as a criterion in the evaluation step.
 \paragraph*{}
 
 \newpage
@@ -292,9 +304,9 @@ The min/max detection is very simply based on the "min" or "max" string found in
 kable(head(relevant_factors2, 15), caption = "15 first relevant factors of the two-criteria classifier")
 ```
 
-This list will serve as a basis to create a criterion list that merges all criteria two by two (for a two-criteria model) with AND operators, then merges all the pairs together with OR operators. The resulting string is simply evaluated against the validation set with a mutate function : if one criteria is met, the predicted edibility is set to TRUE, if not, it is set to FALSE.
+This list will serve as a basis to create a criterion list that merges all criteria two by two (for a two-criteria model) with AND operators, then merges all the pairs together with OR operators. The resulting string is simply evaluated against the validation set with a mutate function : if one pair of criteria is met, the predicted edibility is set to TRUE, if not, it is set to FALSE.
 \paragraph*{}
-The predicted edibility is then compared to the real edibility value.
+The predicted edibility is then compared to the real edibility (reference) value using *confusionMatrix*.
 \paragraph*{}
 By construction, the stupid classifier has *Sensitivity =* `r CM_stupid$byClass["Sensitivity"]` and *Specificity = * `r CM_stupid$byClass["Specificity"]`. The relatively good accuracy score (*Accuracy =* `r round(CM_stupid$overall["Accuracy"], 3)`) is indeed misleading, this model actually performs extremely poorly, with a F1 value that cannot be computed by the *confusionMatrix* function, since this model didn't classify correctly any of the edible mushrooms.
 ```{r out.width = "100%", echo = FALSE}
@@ -458,7 +470,7 @@ kable(fit_rpartcost_best_results[,c(1:2,4:5)], digits = 5, caption = "Performanc
 
 The performance, while very good, did not achieve the specificity requirement.
 \paragraph*{}
-The last tree-based models was the C5.0tree. This model doesn't have any tuning parameter.
+The last tree-based model was C5.0tree. This model doesn't have any tuning parameter.
 
 ```{r, echo = FALSE}
 kable(fit_c50tree_results[,2:4], digits = 5, caption = "Performance of the C5.0 Tree (C5.0Tree) model")
@@ -521,7 +533,15 @@ kable(fit_Rborist_best_results[1:5], caption = "Performance of the Rborist model
 
 The Rborist model gave the same excellent results as the Ranger one, with perfect sensitivity and specificity.
 \paragraph*{}
-These results underline an interesting fact : not all random forest models are created equal. In the first step of the preliminary studies of the caret package models, some random forest models proved to be extremely slow, while others were considerably faster. This study also shows the considerable difference in sensitivity and specificity between the rFerns and the Ranger or Rborist random forest models.
+These results underline an interesting fact : not all random forest models are created equal. This study shows the considerable difference in sensitivity and specificity between the rFerns and the Ranger or Rborist random forest models. In the first step of the preliminary studies of the caret package models, some random forest models also proved to be extremely slow, while others were considerably faster.
+\paragraph*{}
+Speed of some algorithms will be explored in the next section. Running time of any code portion can be very easily measured by:
+```
+start_time <- Sys.time()
+[Code to be evaluated]
+end_time <- Sys.time()
+time <- difftime(end_time, start_time)
+```
 
 \subsection{Memory Optimization}
 During the building of this study, an unforeseen and unfortunate event resulted into the addition of a secondary goal : the code had to be able to handle a `r summary_number` $\times$ `r nrow(structure_dataset)` dataset and run on lower-end computers, with only 4GB RAM + 6GB swap. Memory optimization was an interesting challenge, and implied :
@@ -534,7 +554,7 @@ During the building of this study, an unforeseen and unfortunate event resulted 
 
 The identification of large objects can be performed by the following code :
 
-```
+```{r, eval = FALSE}
 object_list <- objects()
 
 obj_size <- function(fcn_object){
