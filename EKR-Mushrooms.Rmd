@@ -261,9 +261,9 @@ Given the specificity constraint mentioned previously, a "stupid" algorithm can 
 \paragraph*{}
 A slightly more elaborated algorithm can classify mushrooms as edible if they meet one criterion. For example, in figure 3, the mushroom should be classified as edible if *cap.diameter* > 40, if *spore.print.color* = gray or if *veil.color* = yellow.
 \paragraph*{}
-A more sophisticated algorithm can be elaborated with two factors (fig. 4) and will for example, classify a mushroom as edible if *cap.shape* = convex & *cap.surface* = leathery.
+A more sophisticated algorithm can be elaborated with two factors (fig. 4) and will for example, classify a mushroom as edible if *veil.type* = universal & *has.ring* = FALSE.
 
-```{r, echo = FALSE, fig.height = 7, fig.cap = "Two-criteria plots for 4 criteria of interest"}
+```{r, echo = FALSE, fig.height = 6.5, fig.cap = "Two-criteria plots for 4 criteria of interest"}
 pair_plots
 ```
 

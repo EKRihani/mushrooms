@@ -717,7 +717,7 @@ result_Rborist <- c(CM_Rborist_final$byClass["Sensitivity"], CM_Rborist_final$by
 result_ranger <- c(CM_ranger_final$byClass["Sensitivity"], CM_ranger_final$byClass["Specificity"], CM_ranger_final$byClass["F1"], time_ranger)
 rt_result <- rbind(result_ranger, result_Rborist)
 colnames(rt_result) <- c("Sensitivity", "Specificity", "F1 score", "Run time (min)")
-rownames(rt_result) <- c("Rborist", "Ranger")
+rownames(rt_result) <- c("Ranger", "Rborist")
 
 # Get object list sizes and clean environment
 #save.image(file = "EKR-mushrooms-dump4.RData")        # Save everything before environment cleaning
